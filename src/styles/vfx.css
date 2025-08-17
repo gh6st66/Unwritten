@@ -1,0 +1,130 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+/* --- Block Shatter --- */
+.vfx-block-shatter {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-5 -5 110 110' fill='none' stroke='%234a90e2' stroke-width='8'%3E%3Cpath d='M50,5 L20,25 L20,75 L50,95 L80,75 L80,25 Z'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    animation: block-shatter-anim 450ms ease-out forwards;
+    z-index: 10;
+    pointer-events: none;
+    transform-origin: center;
+}
+
+@keyframes block-shatter-anim {
+    0% {
+        opacity: 1;
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 5px white);
+    }
+    25% {
+        opacity: 1;
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 0 white);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.5) translateY(-50px);
+    }
+}
+
+
+/* --- Status Effect Application --- */
+.vfx-status-apply {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    z-index: 20;
+}
+
+.vfx-status-apply > div {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    animation-duration: 450ms;
+    animation-fill-mode: forwards;
+    animation-timing-function: ease-out;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+}
+
+/* VULNERABLE (Stun-like effect) */
+.vfx-status-apply.vulnerable > div {
+    border: 5px solid white;
+    border-radius: 50%;
+    animation-name: vfx-stun;
+}
+@keyframes vfx-stun {
+    0% { opacity: 1; transform: scale(0.6); }
+    20% { opacity: 1; transform: scale(1.2); }
+    100% { opacity: 0; transform: scale(1.2); }
+}
+
+/* STRENGTH */
+.vfx-status-apply.strength > div {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234a90e2'%3E%3Cpath d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/%3E%3C/svg%3E");
+    animation-name: vfx-strength;
+}
+@keyframes vfx-strength {
+    0% { opacity: 0; transform: scale(2.0); }
+    50% { opacity: 1; transform: scale(1.0); }
+    100% { opacity: 0; transform: scale(1.0) translateY(-10px); }
+}
+
+/* --- Status Linger Cues --- */
+.vfx-linger-container {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.vfx-linger {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Strength Linger (Ember) */
+.vfx-linger.strength {
+    left: 50%;
+    bottom: 20px;
+    width: 10px;
+    height: 10px;
+    background-color: var(--accent-red);
+    border-radius: 50%;
+    filter: blur(2px);
+    animation: strength-linger 2s ease-out;
+}
+
+@keyframes strength-linger {
+    0% { transform: translate(-50%, 0); opacity: 0.7; }
+    100% { transform: translate(-50%, -60px) scale(0.5); opacity: 0; }
+}
+
+/* Vulnerable Linger (Crackle) */
+.vfx-linger.vulnerable {
+    top: 50%;
+    left: 50%;
+    width: 80px;
+    height: 80px;
+    border: 2px solid var(--accent-red);
+    border-radius: 50%;
+    animation: vulnerable-linger 0.5s ease-out;
+}
+
+@keyframes vulnerable-linger {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+}

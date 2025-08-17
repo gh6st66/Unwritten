@@ -1,0 +1,47 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+.damage-number-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    z-index: 150;
+}
+
+.damage-number {
+    position: absolute;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #ffdd40; /* Bright yellow for visibility */
+    text-shadow: 
+        -2px -2px 0 #000,  
+         2px -2px 0 #000,
+        -2px  2px 0 #000,
+         2px  2px 0 #000,
+         -2px 0 0 #000,
+         2px 0 0 #000,
+         0 2px 0 #000,
+         0 -2px 0 #000;
+    animation: rise-and-fade 1s ease-out forwards;
+}
+
+@keyframes rise-and-fade {
+    0% {
+        transform: translateY(0) scale(1.0);
+        opacity: 1;
+    }
+    20% {
+        transform: translateY(-10px) scale(1.2);
+    }
+    100% {
+        transform: translateY(-50px) scale(1.0);
+        opacity: 0;
+    }
+}
