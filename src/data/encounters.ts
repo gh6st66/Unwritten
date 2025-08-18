@@ -1,125 +1,76 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
-*/
-import { EncounterDef, EventType, EventOption, GameStateUpdate } from '../core/types';
-import { EVENTS, MARKS, DISPOSITIONS } from '../core/ids';
-import * as id from '../systems/identity';
+import { EncounterDef, RunState } from "../core/types";
+import { addMarkByLabel, adjustDisposition, bumpRegionProsperity, recordScar } from "../systems/mutation";
+import { IntentKind } from "../systems/intent/IntentTypes";
 
-export const encounterData: EncounterDef[] = [
-    {
-      id: EVENTS.COMBAT_001, name: "Wary Guards", event_type: EventType.COMBAT,
-      description: "",
-      enemies: ["GUARD_01", "GUARD_01"]
-    },
-    {
-      id: EVENTS.COMBAT_002, name: "Cunning Outlaw", event_type: EventType.COMBAT,
-      description: "",
-      enemies: ["OUTLAW_01"]
-    },
-    {
-      id: EVENTS.BOSS_FIGHT_01, name: "Captain's Stand", event_type: EventType.COMBAT,
-      description: "The Faction Captain stands in your way. There is no escape.",
-      enemies: ["BOSS_01"]
-    },
-    {
-      id: EVENTS.EVENT_001, name: "The Whispering Idol", event_type: EventType.NARRATIVE,
-      description: "", // Intentionally blank, to be filled by Gemini
-      dynamicResolution: true, // The outcome will be resolved by Gemini
-      seed: 12345,
-      options: [
-        {
-          id: "pray",
-          label: "Pray to the idol.",
-          onChoose: () => {}, // Dynamic
+// Basic conditions
+const ifUnmasked = (s: RunState) => !s.identity.mask.wearing;
+
+export const encounters: EncounterDef[] = [
+  {
+    id: "town_gate",
+    title: "Gate of Ashvale",
+    prose:
+      "The watch captain’s eyes flick to your hands, then to your face. A murmur ripples along the wall. They know what you are.",
+    options: [
+      {
+        id: "parley_mask_on",
+        label: "Keep the mask on. Speak as a traveler.",
+        timeCost: { amount: 2, unit: "hours" },
+        intent: { kind: "PERSUADE" as IntentKind, successCap: 0.8 },
+        onResolve: {
+          PERSUADE_SUCCESS: [bumpRegionProsperity("ashvale", 2)],
+          PERSUADE_FAIL: [bumpRegionProsperity("ashvale", -1)],
         },
-        {
-          id: "touch",
-          label: "Touch the idol.",
-          onChoose: () => {}, // Dynamic
-        },
-        {
-          id: "leave",
-          label: "Leave it alone.",
-          onChoose: () => {}, // Dynamic
+      },
+      {
+        id: "reveal_and_resist",
+        label: "Remove the mask and challenge the rumor you abandoned them.",
+        requiresUnmasked: true,
+        timeCost: { amount: 3, unit: "days" },
+        intent: { kind: "DEFY" as IntentKind, riskDelta: 0.2 },
+        resistClaimId: "ABANDONER",
+        onResolve: {
+            DEFY_SUCCESS: [bumpRegionProsperity("ashvale", 5)],
+            DEFY_FAIL: [recordScar("ashvale:failed_defiance"), bumpRegionProsperity("ashvale", -5)],
         }
-      ] as EventOption[]
-    },
-    {
-      id: EVENTS.SKILL_001, name: "A Rusted Lock", event_type: EventType.SKILL,
-      description: "A heavy chest sits before you, sealed by a complex, rusted lock.",
-      options: [
-        { 
-          id: 'force', 
-          label: "[Aggression] Force it open.", 
-          onChoose: ({ player }) => {
-            id.disp.bump(player, DISPOSITIONS.FORCEFUL, 1);
-            // In a real scenario, this would trigger a skill check
-          } 
-        },
-        { 
-          id: 'pick', 
-          label: "[Cunning] Try to pick the lock.", 
-          onChoose: ({ player }) => {
-            id.disp.bump(player, DISPOSITIONS.DECEPTIVE, 1);
-          } 
+      },
+      {
+        id: "reveal_and_accept",
+        label: "Remove the mask and accept the blame placed upon you.",
+        requiresUnmasked: true,
+        intent: { kind: "COMPLY" as IntentKind },
+        acceptClaimId: "ABANDONER",
+        onResolve: {
+            COMPLY_SUCCESS: [recordScar("ashvale:stigma_abandoner")],
+            COMPLY_FAIL: [recordScar("ashvale:stigma_abandoner")], // Failure or success, the scar is recorded
         }
-      ] as EventOption[]
-    },
-    {
-      id: EVENTS.BEGGAR_PLEA,
-      name: "The Beggar's Plea",
-      description: "A rag-wrapped figure extends a shaking hand. \"A coin, if you can spare it...\"",
-      event_type: EventType.NARRATIVE,
-      options: [
-        {
-          id: "give_coin",
-          label: "Give a coin",
-          description: "A small act of kindness.",
-          onChoose: ({ player, emitLog }) => {
-            id.disp.bump(player, DISPOSITIONS.HONORABLE, 1);
-            id.marks.addStack(player, MARKS.MERCIFUL);
-            emitLog("You press a coin into their palm. Their thanks is a whisper.");
+      },
+    ],
+  },
+  {
+    id: "caravan_crisis",
+    title: "The Stalled Caravan",
+    prose:
+      "Merchants argue in the dust. The road is blocked. Someone mentions the Inquisitors’ tithe doubles when 'the Unwritten' is near.",
+    options: [
+      {
+        id: "work_the_road",
+        label: "Help clear the road anonymously.",
+        timeCost: { amount: 1, unit: "days" },
+        effects: [bumpRegionProsperity("ashvale", 3)],
+      },
+      {
+        id: "petition_inquisitors",
+        label: "Reveal yourself and argue the tithe is unlawful.",
+        requiresUnmasked: true,
+        timeCost: { amount: 2, unit: "days" },
+        effects: [
+          (s) => {
+            // Faction attitude shifts happen here in a fuller impl
+            return s;
           },
-        },
-        {
-          id: "refuse",
-          label: "Refuse",
-          description: "You need it more.",
-          onChoose: ({ emitLog }) => emitLog("You turn away. Silence follows."),
-        },
-        {
-          id: "intimidate",
-          label: "Intimidate",
-          description: "Make them back off.",
-          onChoose: ({ player, emitLog }) => {
-            id.disp.bump(player, DISPOSITIONS.FORCEFUL, 1);
-            id.marks.addStack(player, MARKS.BLOODTHIRSTY);
-            emitLog("Your stare hardens. They shrink into the alley's shadow.");
-          },
-        },
-        {
-          id: "commiserate",
-          label: "[Chainscarred] Share a scarred truth",
-          description: "You've slept on stone. You remember the ache.",
-          condition: { type: "HasMark", mark: MARKS.CHAINSCARRED, minStacks: 1 },
-          visibilityHint: "Requires MARK_CHAINSCARRED",
-          onChoose: ({ emitLog }) => {
-            emitLog("You speak the language of hunger. The beggar nods, eyes bright with recognition.");
-            // Potential for a narrative reward here
-          },
-        },
-        {
-          id: "terrorize",
-          label: "[Killer] Let the reputation speak",
-          description: "No words. Just the memory of what you've done.",
-          condition: { type: "HasMark", mark: MARKS.KILLER, minSeverityGrade: "Murderer" },
-          visibilityHint: "Requires MARK_KILLER at Murderer severity",
-          onChoose: ({ player, emitLog }) => {
-            id.disp.bump(player, DISPOSITIONS.FORCEFUL, 2);
-            emitLog("They recognize you. The coin cup hits the cobbles. Footsteps scatter.");
-          },
-        },
-      ] as EventOption[],
-    }
-  ];
+        ],
+      },
+    ],
+  },
+];

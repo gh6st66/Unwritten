@@ -1,191 +1,94 @@
-# Developer Notes: Roguelike Card Game
+# Proposal: Redesign of The Unwritten Core Systems
 
-This document is for developers to track key architectural decisions, concepts, and future work for this project.
+## Overview
 
-## Core Architecture
+This proposal formalizes recent design revisions to The Unwritten. The game pivots from combat-driven systems toward a narrative roguelike RPG, where conflict arises from time pressure, narrative gravity, and inherited reputation.
 
-The application follows a modern React/TypeScript structure with a clear separation of concerns:
+The Unwritten is now framed as a balancing archetype in the world’s cosmology, universally recognized and mythologized. Masks, marks, echoes, and world persistence create a layered system of legacy and consequence.
 
--   **`components/`**: Contains all React components responsible for rendering the UI. They should remain as stateless as possible, receiving data and callbacks as props.
--   **`systems/`**: Houses the core game logic, which is decoupled from the React view layer. This includes things like the `EffectSystem`, `DeckManager`, and `DataLoader`. This makes the logic easier to test and reason about.
--   **`hooks/`**: Custom React hooks that encapsulate complex state management and side effects (e.g., `useGameLoopManager`, `useResourcePools`).
--   **`data/`**: Static game data like card definitions, enemy stats, and events. This data is loaded into memory at startup by the `DataLoader`.
--   **`core/`**: TypeScript types, enums, and IDs that are shared across the entire application.
+At the heart of the game is the **Run Loop**—a repeatable cycle that structures every life of the Unwritten and every roguelike run.
 
----
+## Core Loop (The Life of the Unwritten)
 
-## Game Concept: "The Ink-Stained Path"
+1.  **The Journal Writes** — a fate-claim is imposed on the player (“You betray allies”).
+2.  **Choice Point** — the player must resist or enact the claim through narrative actions, using the Intent System.
+3.  **Marks** — reputation scars are set, inherited, or inverted based on the outcomes.
+4.  **Echoes** — consequences manifest in the world (NPCs, factions, ruins).
+5.  **Entropy / Growth Outcome** — cities, factions, and the world tilt toward ruin or prosperity.
+6.  **Collapse** — the Unwritten inevitably ends; a new vessel rises with inherited scars and a shifting world.
 
-This is the narrative and thematic framework for the game.
+That is a rogelike run: clean, thematic, and infinitely repeatable.
 
-### The World
+## Core Systems
 
-The setting is the **Remnant Empire of Askara**, a once-great civilization now crumbling generations after a magical cataclysm known as **"The Great Silence."** The Silence didn't just break the world physically; it frayed the threads of causality, history, and memory.
+### 1. Conflict Resolution via the Intent System
 
--   **Truth is Malleable:** History is a collection of conflicting stories. Records are burnt, memories are unreliable, and ancient sites shift and change. In Askara, what is *believed* to be true, especially when proven by deeds, can have tangible power.
--   **Factions:** The primary factions are the **Inquisitors**, who seek to impose a single, dogmatic "Truth" on the world, and the various splinter groups (cults, scholar-collectives, rebel cells) who hoard their own versions of history.
+Traditional combat is eliminated. Conflict and choice are now resolved through a transparent, narrative-driven **Intent System**. Instead of choosing an attack, the player declares their *approach* to a situation, and the system calculates the potential outcomes based on their character's identity.
 
-### The Player's Role & Goal
+This system is built on several key components:
 
-The player is an **"Unwritten"**—an individual who has lost their memory, cast out from an Inquisitor's prison. They are a blank slate in a world obsessed with history and lineage.
+*   **Intents:** A set of defined player approaches to a problem, such as `CONFRONT`, `DECEIVE`, `PERSUADE`, or `DEFY`. Each encounter option is now linked to a specific Intent.
+*   **Traits:** The character's core attributes that power Intents. These are the primary resources spent to take action:
+    *   `AGG` (Aggression)
+    *   `WIS` (Wisdom)
+    *   `CUN` (Cunning)
+    *   Hybrid traits (`AW`, `AC`, `WC`) for more complex actions.
+*   **Intent Vector:** The mathematical "shape" of an Intent, describing its inherent `risk`, `subtlety`, and the `traits` it relies on.
+*   **Scoring & Transparency:** Before committing to an action, the player is shown a preview of the `chance of success`, the `projected resource cost`, and the `narrative tension` (a measure of risk vs. resources). This allows for informed, strategic decision-making.
+*   **Resolution:** The `IntentEngine` resolves the action, determining success or failure and applying costs. The outcome then directly influences the character's identity and the world state.
+*   **Identity Hooks (Signals):** Intents are directly tied to the Mark and Disposition systems. Choosing an `INTIMIDATE` intent might strengthen a `FEARED` Mark, while `PERSUADE` could improve a `COMPASSION` disposition. This creates a tight feedback loop where actions define character, and character influences the success of future actions.
 
--   **The Goal:** The player's journey is not just to survive, but to **write their own story**. They travel the Ink-Stained Path (the game map) towards the heart of the old empire, the Silent Capital. Their goal is either to find and reclaim their true past or to forge a new identity so powerful that it overwrites whatever came before.
--   **The Conflict:** The Inquisitors see the player as a threat—a blank page that could be filled with a "heretical" story. The player is constantly hunted, their emerging identity a challenge to the Inquisitors' rigid Truth.
+This system makes every choice a statement of character, with mechanically supported consequences.
 
-### Tying Mechanics to Theme
+### 2. The Archetype of the Unwritten
 
-This concept directly integrates our core game systems:
+The Unwritten is not a lineage but a recurring vessel of balance. They exist to disrupt fate whenever the world tilts too far toward certainty and stagnation. Recognition is universal: everyone knows the Unwritten on sight, no matter the vessel.
 
--   **Origin Story:** The "Inquisitor's Journal" is the world trying to impose a past on you. The burnt, fragmented accusations are the Inquisitors' "official story." Your choices are you actively "remembering" or "deciding" your own truth from these fragments. Your final "Seal" is the title of your story's prologue.
--   **Identity System (Dispositions & Marks):** This is the literal "ink" staining your soul. Each Mark and Disposition point is a tangible record of the story you are writing through your actions.
-    -   A `MARK_KILLER` isn't just a game tag; it's a chapter you've written that makes you a killer in the eyes of the world.
-    -   Your Dispositions (Forceful, Honorable, etc.) are the recurring themes of your personal narrative.
--   **Gemini API:** The AI is the voice of this fractured, reactive world.
-    -   It narrates encounter descriptions based on the world's *perception* of your story (your Marks). A character "marked" as a `CHAINSCARRED` will be described differently by guards.
-    -   It resolves dynamic events based on how your "story" (your Dispositions) intersects with the current situation. A "Forceful" character's story resolves a tense standoff differently than an "Honorable" one.
--   **Character Portability:** This concept fits perfectly. Exporting a character is like printing a "completed story." Importing that character into another player's world introduces them as a fixed "text"—an NPC whose personality and actions are defined by the story they have already written.
+### 3. Masks
 
----
+Masks are a culturally universal motif—carved from wood, bone, and natural materials. The Unwritten’s mask is unique and semi-persistent across runs, evolving as marks fade or transform.
+-   **Wearing the mask:** The player can pass as ordinary, engaging in society unnoticed.
+-   **Removing the mask:** Immediate recognition and all consequences of legacy.
+Echoes and NPC factions may also bear masks, reflecting their alignment or history.
 
-## Inquisitor System: Design Notes for Implementation
+### 4. Marks (Scars of Fate)
 
-The Inquisitor is not a regular NPC. He functions as a narrative system that shapes the player’s story. His presence is primarily felt through Journal claims and, in rare cases, a trial event of mythic proportions.
+The Journal writes identity-claims (“The Unwritten betrays an ally”). These become Marks, persistent scars of reputation.
+-   **Inheritance:** the next run suffers the full weight of recent Marks.
+-   **Decay:** over generations, Marks weaken unless renewed by repetition.
+-   **Redemption:** players can invert Marks through effort (OATHBREAKER → LOYALIST).
 
-### 1. Journal as Gameplay
+### 5. Echoes (Manifestations of Past Runs)
 
-The Inquisitor periodically writes a truth-claim about the player.
+Past selves and consequences return physically or culturally:
+-   NPCs (a deserter turned mercenary leader).
+-   Factions (formed around past cruelty or mercy).
+-   Monuments, curses, or ruins tied to earlier choices.
+Echoes fade across generations but leave permanent traces in lore and geography.
 
-**Examples:**
-*   “The Unwritten betrayed an ally.”
-*   “The Unwritten is marked by cowardice.”
+### 6. Entropy vs. Growth Balance
 
-Once written, the claim becomes **active**:
-*   NPCs react accordingly.
-*   Encounter options may be added, removed, or costlier.
-*   Combat/narrative modifiers can appear.
+Personal entropy is inevitable: each Unwritten’s life ends in collapse. The world is dynamic, not doomed:
+-   Abandon a city → ruin.
+-   Aid a city → growth or stability.
+-   Betray a city → corruption or hostile takeover.
+Across runs, the world becomes a patchwork of decay and prosperity, shaped by the Unwritten’s influence.
 
-**Player agency:**
-*   **Accept claim** → lean into the imposed past.
-*   **Subvert claim** → disprove it by making opposing choices.
+### 7. Inquisitors (Institutional Antagonists)
 
-**Implementation detail:**
-A claim is represented as an `EventModifier` tied to encounters.
-*Example:*
-*   Claim = `COWARD`.
-*   Encounters gain cowardice-tagged options (“Flee immediately”).
-*   Bravery options cost more, but choosing them removes/overwrites the claim.
+A powerful order that sees the Unwritten as an existential threat to order.
+-   **Role:** human face of narrative rigidity—zealots who mistake stagnation for safety.
+-   **Aesthetic:** masks and robes covered in script, chains and brands etched with text.
+-   **Structure:**
+    -   High Inquisitors interpret the Journal.
+    -   Scribes brand people with their “true” roles.
+    -   Seekers hunt the Unwritten and anomalies.
+They are not entropy itself, but the world’s immune response—fate’s bureaucracy.
 
-### 2. Escalation Curve
+## Why These Changes Work
 
-*   **Early Game:** vague claims, mild modifiers.
-*   **Mid Game:** sharper, restrictive claims (“TRAITOR OF KIN”).
-*   **Late Game:** false claims that overwrite reality itself. The world enforces contradictory truths.
-
-### 3. Rare Trial Encounter
-
-At key inflection points (once or twice per run), the Inquisitor appears in full as a boss-level narrative event.
-
-**Trigger Conditions:**
-*   Player holds conflicting Marks (e.g. MERCIFUL + KILLER).
-*   Player resisted multiple Journal entries.
-*   OR narrative progress passes a threshold.
-
-**Event Structure:**
-
-**Phase 1 – Summoning**
-*   Player is pulled into a “mythic courtroom.”
-*   Suspend normal gameplay systems.
-
-**Phase 2 – Accusation**
-*   Inquisitor states a formal claim.
-```json
-{
-  "accusation": {
-    "source": "inquisitor",
-    "text": "From silence was born a false soul. This Unwritten has betrayed kin and history alike.",
-    "claim": "TRAITOR"
-  }
-}
-```
-
-**Phase 3 – Exchange (Gemini API-driven)**
-*   Dialogue duel with 3 rounds.
-*   System sends:
-    *   Current claim.
-    *   Player’s Marks + recent choices.
-    *   Trial tone instructions.
-*   Gemini generates Inquisitor + juror arguments.
-*   Player responses are generated by the event engine:
-    *   Based on current Marks.
-    *   Generic fallback: Defy, Submit, Paradox.
-    *   Responses cost resources (Wisdom, Aggression, Cunning).
-
-```json
-{
-  "exchange": {
-    "engine": "gemini",
-    "rounds": 3,
-    "playerOptions": [
-      { "type": "defy", "cost": { "wisdom": 2 }, "condition": { "mark": "LOYAL" } },
-      { "type": "submit", "cost": { "none": true } },
-      { "type": "paradox", "cost": { "cunning": 3 } }
-    ]
-  }
-}
-```
-
-**Phase 4 – Resolution**
-*   Outcome determined by narrative + resource spend.
-
-*   **Vindication**
-    *   Gain Mark: `SELF_WRITTEN` (legendary).
-    *   Claim erased.
-    *   Journal visibly destroyed.
-*   **Condemnation**
-    *   Gain Mark: `INQUISITOR_BRAND`.
-    *   Claim becomes canon.
-    *   NPCs/events permanently treat it as truth.
-*   **Paradox**
-    *   Gain Mark: `PARADOX_BORN`.
-    *   Creates unstable outcomes (misfiring events, NPCs misremembering differently).
-
-**Phase 5 – Aftermath**
-*   World state changes retroactively.
-*   Example: branded as “TRAITOR” → guild encounters default to hostile.
-
-### 4. Key Design Principles
-
-*   **Narrative-first:** The Inquisitor encounter is rare, cinematic, and systemically disruptive.
-*   **Player Identity as Resource:** Victory/defeat isn’t about HP; it’s about which version of the story becomes dominant.
-*   **Replayability:** Since exchanges are LLM-driven, no two trials play the same way.
-
-This system makes the Inquisitor both a persistent narrative algorithm (via Journal claims) and a rare, unforgettable trial event that defines the run.
-
----
-
-## Key Concepts
-
-### 1. Gemini API Integration
-
-The Gemini API is a cornerstone of the game's dynamic narrative experience. We use it in three key places:
-
-1.  **Origin Story Generation (`generateOriginStory`)**: Creates a unique, multi-page journal for the player to define their character's backstory. This seeds the entire run with narrative context.
-2.  **Dynamic Encounter Descriptions (`generateNarrative`)**: For encounters with a blank `description` field, Gemini generates a short, flavorful scene based on the player's current state (Dispositions, Marks, backstory). This makes repeated encounters feel fresh.
-3.  **Dynamic Event Resolution (`resolveDynamicEvent`)**: For events marked with `dynamicResolution: true`, Gemini determines the outcome of a player's choice, generating narrative text and mechanical effects based on their character profile.
-
-**Note on Prompts:** The quality of the prompts sent to Gemini is paramount. They are carefully engineered to provide context (player state, event details) and request a specific JSON output format to ensure reliable integration.
-
-### 2. The Identity System (Dispositions & Marks)
-
-This is the system that makes the world feel reactive to the player.
-
--   **Dispositions**: Broad, slow-changing personality traits (e.g., Forceful, Deceptive, Honorable). They represent the character's core nature and are adjusted by major choices.
--   **Marks**: Specific reputation tags or "badges" acquired from actions (e.g., `MARK_KILLER`, `MARK_MERCIFUL`, `MARK_CHAINSCARRED`). They are more numerous and dynamic than Dispositions and can unlock unique event options or cause NPCs to react differently. The definitions in `src/data/marks.ts` are highly detailed and drive many of the game's reactive systems.
-
-### 3. Character Portability & Divergence (Philosophical Goal)
-
-A core design philosophy is that a character should be primarily defined by their quantitative identity data—their Dispositions and Marks. This data-centric approach should allow for character portability.
-
--   **Portability**: It should be architecturally simple to export a snapshot of Player A's character state (`PlayerState`) and import it into Player B's game world as a new NPC.
--   **NPC Behavior**: This imported character would then act autonomously in Player B's world, with its behavior and dialogue choices (potentially driven by Gemini) guided by its established Dispositions and Marks.
--   **Divergence**: Once imported, the character is no longer controlled by Player A. It would live on in Player B's world, and its identity would diverge from the original as it experiences new events. Without frequent "alignment" updates from Player A's source character, this NPC would become a unique, independent version of the original.
+-   **Stronger Narrative Identity:** Positions The Unwritten as a mythic roguelike where fate itself is the enemy.
+-   **Replayability Without Reset Fatigue:** Legacy ensures every run leaves scars, but decay and redemption allow long-term evolution.
+-   **Cultural Depth Through Masks & Myth:** Masks tie anonymity and recognition directly to universal worldbuilding motifs.
+-   **Dynamic World State:** Player choices leave permanent scars, creating a patchwork of thriving hubs and wastelands.
+-   **Tangible Antagonists:** Inquisitors give human shape to abstract cosmic forces, creating dialogue, temptation, and visible opposition.

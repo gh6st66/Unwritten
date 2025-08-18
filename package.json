@@ -1,21 +1,13 @@
+
 {
-  "name": "roguelike-card-game",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "name": "unwritten-narrative-roguelike",
+  "version": "1.0.0",
+  "description": "A narrative roguelike with time, fate, and persistence.",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "audit:no-combat": "rg -nE 'from \".*(combat|DeckManager|CardView|Hand|AdvantageSystem|StatusSystem|TurnHooks|VfxUtils|/cards|/DataLoader|/factions|/core/ids)\"' src && echo '❌ Forbidden imports found' && exit 1 || echo '✅ No forbidden imports'"
   },
   "dependencies": {
-    "react-dom": "^19.1.1",
     "react": "^19.1.1",
-    "@google/genai": "latest"
-  },
-  "devDependencies": {
-    "@types/node": "^22.14.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "react-dom": "^19.1.1"
   }
 }
