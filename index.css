@@ -1,4 +1,9 @@
 :root { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color-scheme: dark; }
+
+html, body, #root {
+  height: 100%;
+}
+
 body { margin: 0; background: #0b0d10; color: #ecf0f1; }
 .game { display: grid; grid-template-columns: 1fr 280px; gap: 16px; padding: 20px; }
 .hud { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 16px; }

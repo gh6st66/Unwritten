@@ -1,0 +1,75 @@
+.title-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+  color: #ecf0f1;
+  text-align: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.title-content {
+  max-width: 600px;
+  animation: fadeInContent 1.5s ease-out forwards;
+}
+
+@keyframes fadeInContent {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.game-title {
+  font-size: 4rem;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+  margin: 0 0 16px;
+  text-transform: uppercase;
+  color: #a3bbf1;
+}
+
+.game-subtitle {
+  font-size: 1.1rem;
+  opacity: 0.75;
+  line-height: 1.6;
+  margin-bottom: 40px;
+}
+
+.start-button {
+  background: #a3bbf1;
+  color: #0b0d10;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 200ms ease, background-color 200ms ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.start-button:hover {
+  transform: scale(1.05);
+  background: #c1d3f8;
+}
+
+@media (max-width: 600px) {
+  .game-title {
+    font-size: 3rem;
+  }
+  .game-subtitle {
+    font-size: 1rem;
+  }
+  .start-button {
+    padding: 14px 28px;
+    font-size: 1.1rem;
+  }
+}
