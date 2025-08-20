@@ -4,6 +4,10 @@ export default {
   "title": "The Broken Wheel",
   "summary": "A miller blocks the road, his cart's wheel splintered. He pleads for aid.",
   "tensionMod": 2,
+  "context": {
+    "scene": "Street",
+    "npcRole": "Merchant"
+  },
   "options": [
     {
       "id": "LEND_HAND",

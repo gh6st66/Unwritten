@@ -25,7 +25,7 @@ This document outlines the development plan to evolve the game based on the new 
     -   [x] Implement the "Collapse" event that ends a run.
     -   [x] Build the persistence layer that allows the next run to "Inherit" the Marks from the previous one.
     -   [x] Implement the Mark "Decay" system, where inherited Marks weaken over several runs if not reinforced.
--   [ ] **Time as a Resource:** Integrate a simple time mechanic where making choices at map nodes consumes time, progressing a global "Entropy" clock.
+-   [x] **Time as a Resource:** Integrate a simple time mechanic where making choices at map nodes consumes time, progressing a global "Entropy" clock.
 
 ---
 
@@ -35,8 +35,8 @@ This document outlines the development plan to evolve the game based on the new 
 
 -   [ ] **Procedural World Generation:**
     -   [x] Integrate the new procedural generation system (`src/gen`).
-    -   [ ] At the start of a run, generate a dynamic world map consisting of multiple interconnected `Region`s. This will replace the static `LOCATIONS` data.
-    -   [ ] Populate generated regions with procedurally generated `NPC`s, each with unique roles, traits, and rumors.
+    -   [x] At the start of a run, generate a dynamic world map consisting of multiple interconnected `Region`s. This will replace the static `LOCATIONS` data.
+    -   [x] Populate generated regions with procedurally generated `NPC`s, each with unique roles, traits, and rumors.
     -   [ ] Create a system for dynamic encounters based on the generated NPCs and regional tensions, reducing reliance on static encounter files.
     -   [ ] Hook the `echoes` from the player's legacy into the `WorldContext` to allow past runs to influence the generation of new worlds and characters.
 -   [ ] **Mask System:**
@@ -48,7 +48,7 @@ This document outlines the development plan to evolve the game based on the new 
     -   [ ] Design the first persistent NPC Echo, where an NPC from a past run can reappear with their state and memory intact.
 -   [ ] **Inquisitor Encounters:**
     -   [ ] Design and write the first Inquisitor narrative events.
-    -   [ ] These encounters should directly challenge the player's Marks and offer difficult choices related to the current "fate-claim".
+    -   [ ] These encounters should directly challenge the player's Marks and offer a difficult choices related to the current "fate-claim".
 
 ---
 

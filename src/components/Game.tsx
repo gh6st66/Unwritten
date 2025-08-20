@@ -1,12 +1,8 @@
-
-
-
 import React, { useState } from "react";
 import { useRun } from "../context/RunContext";
 import { NarrativeEventView } from "./NarrativeEventView";
 import { IntentBar } from "./IntentBar";
 import { JournalView } from "./JournalView";
-import { LOCATIONS } from "../data/locations";
 import { LogView } from "./LogView";
 import { Mark } from "../core/types";
 import { TriangleMeter } from "./TriangleMeter";
@@ -14,7 +10,7 @@ import { TriangleMeter } from "./TriangleMeter";
 export const Game: React.FC = () => {
   const { state } = useRun();
   const { availableEncounters } = useRun();
-  const locationDef = LOCATIONS[state.locationId];
+  const locationDef = state.world.regions.find(r => r.id === state.locationId);
 
   const dispositions = Object.entries(state.dispositions)
     .filter(([, value]) => value !== 0)

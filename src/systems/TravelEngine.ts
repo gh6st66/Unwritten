@@ -1,14 +1,12 @@
 import { RunState, LocationId } from "../core/types";
-import { timeCostToMinutes } from "./timeUtils";
-import { LOCATIONS } from "../data/locations";
 import { advanceTime } from "../core/time";
 
 export function travel(s: RunState, to: LocationId, willCost: number): { next: RunState, log: string } | { error: string } {
-    const currentLocDef = LOCATIONS[s.locationId];
+    const currentLocDef = s.world.regions.find(r => r.id === s.locationId);
     if (!currentLocDef) return { error: "Current location is invalid." };
 
-    const connection = currentLocDef.connections.find(c => c.to === to);
-    if (!connection) return { error: "Invalid travel destination." };
+    const connectionExists = currentLocDef.neighbors.includes(to);
+    if (!connectionExists) return { error: "Invalid travel destination." };
 
     if ((s.resources.will ?? 0) < willCost) {
         return { error: "Not enough Will to travel." };
@@ -18,11 +16,12 @@ export function travel(s: RunState, to: LocationId, willCost: number): { next: R
 
     // 1. Apply costs
     next.resources = { ...next.resources, will: (next.resources.will ?? 0) - willCost };
-    const minutes = timeCostToMinutes(connection.timeCost);
+    const minutes = currentLocDef.travelCost.time;
     next = advanceTime(next, minutes);
 
     // 2. Update location
     next.locationId = to;
 
-    return { next, log: `You travel to ${LOCATIONS[to]?.name ?? to}.` };
+    const destLocDef = s.world.regions.find(r => r.id === to);
+    return { next, log: `You travel to ${destLocDef?.name ?? to}.` };
 }

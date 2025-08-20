@@ -4,6 +4,10 @@
     "title": "Gate of Ashvale",
     "location": "ashvale:gate",
     "summary": "The watch captain’s eyes flick to your hands, then to your face. A murmur ripples along the wall. They know what you are.",
+    "context": {
+      "scene": "Gate",
+      "npcRole": "WatchCaptain"
+    },
     "options": [
       {
         "id": "parley_mask_on",

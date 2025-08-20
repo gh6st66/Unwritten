@@ -1,11 +1,10 @@
-
-
 import React, { useState, useMemo } from "react";
 import { useRun } from "../context/RunContext";
 import { Encounter, EncounterOption, MarkId, NarrativeMark, PCState, WorldCtx } from "../core/types";
 import { IntentPreview } from "./IntentPreview";
 import { Preview } from "../core/intent";
-import { EncounterRenderer } from "./EncounterRenderer";
+import { pickThought } from "../narrative/select";
+import { THOUGHTS } from "../narrative/pools";
 
 // A plausible mapping from the game's specific Marks to the narrative system's archetypes.
 const markIdToNarrativeMark: Partial<Record<MarkId, NarrativeMark>> = {
@@ -57,37 +56,34 @@ export const NarrativeEventView: React.FC<{ encounter: Encounter }> = ({ encount
   }, [state.marks, state.traits]);
 
   const worldCtx: WorldCtx = useMemo(() => {
-    let scene: WorldCtx['scene'] = 'Street'; // Default
-    const loc = state.locationId;
-    if (loc.includes('gate')) scene = 'Gate';
-    else if (loc.includes('market')) scene = 'Market';
-    
-    let npcRole: WorldCtx['npcRole'] = 'Guard'; // Default
-    // This could be improved with data in encounter definitions
-    if (encounter.id === 'town_gate') npcRole = 'WatchCaptain';
-    if (encounter.id === 'HELP_MILLER') npcRole = 'Merchant';
-
+    const currentRegionState = state.regions[state.locationId.split(':')[0]];
     let recognition: WorldCtx['recognition'] = 'Unknown';
-    const notoriety = state.regions['ashvale']?.notoriety ?? 0;
+    const notoriety = currentRegionState?.notoriety ?? 0;
+
     if (!state.mask.worn) {
         recognition = 'Known';
     } else if (notoriety > 25) {
         recognition = 'Suspected';
     }
 
+    // Create a unique, deterministic seed for this specific encounter instance
+    const encounterSeed = encounter.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
     return {
-        scene,
-        npcRole,
+        scene: encounter.context?.scene ?? 'Street',
+        npcRole: encounter.context?.npcRole ?? 'Guard',
         tension: Math.min(3, Math.floor(state.tension / 25)) as WorldCtx['tension'],
         recognition,
-        seed: state.time, // use time as a seed that changes per action
+        seed: state.time + encounterSeed, // Combine time with a unique encounter hash
     };
-  }, [state.locationId, state.tension, state.mask.worn, state.regions, state.time, encounter.id]);
+  }, [state.locationId, state.tension, state.mask.worn, state.regions, state.time, encounter.id, encounter.context]);
+
+  const thought = useMemo(() => pickThought(THOUGHTS, pcState, worldCtx), [pcState, worldCtx]);
 
   return (
     <div className="event">
       <h2>{encounter.title}</h2>
-      <EncounterRenderer pc={pcState} world={worldCtx} />
+      <p>{encounter.summary} [{thought}]</p>
       <div className="options-container">
         <div className="options">
             {encounter.options.map(o => (

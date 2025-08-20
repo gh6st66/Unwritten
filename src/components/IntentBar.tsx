@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useRun } from "../context/RunContext";
 import { flora } from "../data/flora";
-import { LOCATIONS } from "../data/locations";
 import { ForageParams } from "../systems/ForageEngine";
 
 type Action = 'forage' | 'travel' | 'rest';
@@ -48,13 +47,23 @@ const ForagePanel: React.FC = () => {
 
 const TravelPanel: React.FC = () => {
     const { state, travel } = useRun();
-    const locationDef = LOCATIONS[state.locationId];
+    const locationDef = state.world.regions.find(r => r.id === state.locationId);
     
-    if (!locationDef) return <div>Invalid location...</div>
+    if (!locationDef) return <div>Invalid location...</div>;
+
+    const connections = locationDef.neighbors.map(neighborId => {
+        const neighborRegion = state.world.regions.find(r => r.id === neighborId);
+        return {
+            to: neighborId,
+            label: `Go to ${neighborRegion?.name ?? 'an unknown region'}`,
+            timeCost: { amount: locationDef.travelCost.time, unit: 'minutes' as const },
+            willCost: locationDef.travelCost.fatigue,
+        };
+    });
 
     return (
         <div className="travel-buttons">
-            {locationDef.connections.map(c => (
+            {connections.map(c => (
                 <button 
                     key={c.to} 
                     onClick={() => travel(c.to, c.willCost)}

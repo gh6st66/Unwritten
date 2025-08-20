@@ -1,3 +1,4 @@
+import { Id, Region as GenRegion, NPC as GenNPC, FactionDef } from "../gen/types";
 
 
 // Basic enums
@@ -9,7 +10,7 @@ export type MarkId =
   | "OATHBREAKER" | "LOYALIST" | "MERCIFUL" | "CRUEL" | "COWARD" | "BRAVE" | "TRICKSTER" | "STEADFAST";
 export type EchoTag = "TOWN" | "NPC" | "RUMOR" | "SCAR" | "RITE" | "FLORA";
 export type ItemId = string;
-export type LocationId = string;
+export type LocationId = Id<"region">;
 
 export type ConditionFn = (s: RunState) => boolean;
 export type EffectFn = (s: RunState) => RunState;
@@ -72,6 +73,10 @@ export interface Encounter {
   options: EncounterOption[];
   location?: string;
   appearsIf?: any; // placeholder for conditions
+  context?: {
+    scene: WorldCtx['scene'];
+    npcRole: WorldCtx['npcRole'];
+  }
 }
 
 export interface EchoSeed {
@@ -124,6 +129,12 @@ export interface LogMessage {
   timestamp: number;
 }
 
+export interface World {
+    regions: GenRegion[];
+    npcs: GenNPC[];
+    factions: FactionDef[];
+}
+
 export interface RunState {
   runId: string;
   rngSeed: string;
@@ -144,6 +155,7 @@ export interface RunState {
   regions: Record<string, { prosperity: number; notoriety: number; stability: number; }>;
   leads: Record<ItemId, number>;
   generationIndex: number;
+  world: World;
 }
 
 export interface LegacyState {

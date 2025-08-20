@@ -1,6 +1,4 @@
-
-
-import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
 import { RunState, Encounter, EncounterOption, Trait, Resources, Disposition, Mark, MarkId, LocationId } from "../core/types";
 import { encounters } from "../data/encounters";
 import { previewOption, Preview } from "../core/intent";
@@ -9,6 +7,9 @@ import { applyMarkXP } from "../core/marks";
 import { ForageParams, forage as forageEngine } from "../systems/ForageEngine";
 import { travel as travelEngine } from "../systems/TravelEngine";
 import { rest as restEngine } from "../systems/RestEngine";
+import timeData from '../data/tables/time.js';
+
+type CollapseReason = "defeat" | "entropy" | "choice" | "escape";
 
 type RunCtx = {
   state: RunState;
@@ -30,12 +31,20 @@ export const useRun = () => {
 export const RunProvider: React.FC<{ 
     initial: RunState; 
     children: React.ReactNode;
-    onCollapse: (finalState: RunState) => void;
+    onCollapse: (finalState: RunState, reason: CollapseReason) => void;
 }> = ({ initial, children, onCollapse }) => {
   const [state, setState] = useState<RunState>(initial);
 
+  useEffect(() => {
+    if (state.time >= timeData.maxRunMinutes) {
+      onCollapse(state, 'entropy');
+    }
+  }, [state, onCollapse]);
+
   const availableEncounters = useMemo(() => {
-    return encounters.filter(e => !e.location || e.location === state.locationId);
+    // TODO: Re-implement location filtering once dynamic encounters are in place.
+    // For now, all encounters are available everywhere.
+    return encounters;
   }, [state.locationId]);
 
   const preview = useCallback((encId: string, optId: string): Preview | null => {

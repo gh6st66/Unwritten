@@ -29,7 +29,11 @@ function scoreTemplate<T extends { weight?: number; when?: any[]; text: string }
 }
 
 function weightedPick<T>(rng: () => number, items: { item: T; weight: number }[]): T {
+  if (items.length === 0) return null as T;
   const total = items.reduce((a, b) => a + b.weight, 0);
+  if (total <= 0) {
+    return items[Math.floor(rng() * items.length)].item;
+  }
   let r = rng() * total;
   for (const it of items) {
     if ((r -= it.weight) <= 0) return it.item;
@@ -52,9 +56,30 @@ function clampWords(s: string, n: number) {
 
 export function pickThought(pool: ThoughtTemplate[], pc: PCState, w: WorldCtx): string {
   const i = { pc, w };
-  const candidates = pool.filter(t => passesAll(t.when, i));
   const rng = mulberry32((w.seed + 17) ^ 0xBEE5);
-  const scored = candidates.map(t => ({ item: t, weight: scoreTemplate(t, i, markWeights(pc)) }));
-  const chosen = (scored.length ? weightedPick(rng, scored) : pool[pool.length - 1]);
+  
+  // 1. Find all specific thoughts that match the context
+  const specificCandidates = pool.filter(t => t.when && passesAll(t.when, i));
+
+  let chosen: ThoughtTemplate | null = null;
+
+  if (specificCandidates.length > 0) {
+    // 2. If we have specific matches, pick from them
+    const scored = specificCandidates.map(t => ({ item: t, weight: scoreTemplate(t, i, markWeights(pc)) }));
+    chosen = weightedPick(rng, scored);
+  } else {
+    // 3. Otherwise, pick from the fallbacks (those without a `when` clause)
+    const fallbacks = pool.filter(t => !t.when);
+    if (fallbacks.length > 0) {
+        const scoredFallbacks = fallbacks.map(t => ({ item: t, weight: scoreTemplate(t, i, markWeights(pc)) }));
+        chosen = weightedPick(rng, scoredFallbacks);
+    }
+  }
+
+  // Handle empty pools as a safety measure
+  if (!chosen) {
+      chosen = pool[pool.length - 1];
+  }
+
   return chosen.maxWords ? clampWords(chosen.text, chosen.maxWords) : chosen.text;
 }

@@ -43,9 +43,10 @@ export const THOUGHTS: ThoughtTemplate[] = [
   { when: [echoHas("BurnedBridge")],              text: "Ash has a long memory." },
   { when: [echoHas("HelpedTown")],                text: "Did help purchase any silence?" },
   { when: [recogIs("Known"), tensionAtLeast(2)],  text: "The mask speaks before I can." },
-  { when: [roleIs("WatchCaptain")],               text: "Rank hides fear under iron." },
+  { weight: 3, when: [roleIs("WatchCaptain")],   text: "Rank hides fear under iron." },
+  { when: [roleIs("Merchant")],                   text: "Simple folk, simple problems. Usually." },
 
   // Fallbacks (keep short)
   { text: "Read the room. Spend nothing extra." },
-  { text: "Keep the breaths small." }
+  { text: "Silence is armor." }
 ];
