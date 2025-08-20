@@ -188,3 +188,26 @@ export interface LocationDef {
   description: string;
   connections: LocationConnection[];
 }
+
+// Added for procedural narrative generation
+export type NarrativeMark =
+  | "Betrayer" | "Savior" | "Outcast" | "Monster" | "Trickster" | "Oathbound" | "Witness";
+
+export type NarrativeDisposition = "Aggression" | "Cunning" | "Wisdom";
+
+export type NarrativeEchoTag = "HelpedTown" | "BurnedBridge" | "SparedEnemy" | "Unmasked" | "DebtUnpaid";
+
+export interface PCState {
+  marks: Partial<Record<NarrativeMark, number>>;          // 0..3
+  disp: Partial<Record<NarrativeDisposition, number>>;    // 0..5
+  echoes: NarrativeEchoTag[];
+  maskTraits?: string[];
+}
+
+export interface WorldCtx {
+  scene: "Gate" | "Market" | "Sanctum" | "Street" | "Cell";
+  npcRole: "WatchCaptain" | "Merchant" | "Priest" | "Guard" | "Mob";
+  tension: 0 | 1 | 2 | 3;
+  recognition: "Unknown" | "Suspected" | "Known";
+  seed: number;                                   // run/turn deterministic seed
+}
