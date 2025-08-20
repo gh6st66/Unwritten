@@ -33,6 +33,12 @@ This document outlines the development plan to evolve the game based on the new 
 
 *Goal: Make the world feel alive and reactive by implementing the Mask, Echo, and Inquisitor systems.*
 
+-   [ ] **Procedural World Generation:**
+    -   [x] Integrate the new procedural generation system (`src/gen`).
+    -   [ ] At the start of a run, generate a dynamic world map consisting of multiple interconnected `Region`s. This will replace the static `LOCATIONS` data.
+    -   [ ] Populate generated regions with procedurally generated `NPC`s, each with unique roles, traits, and rumors.
+    -   [ ] Create a system for dynamic encounters based on the generated NPCs and regional tensions, reducing reliance on static encounter files.
+    -   [ ] Hook the `echoes` from the player's legacy into the `WorldContext` to allow past runs to influence the generation of new worlds and characters.
 -   [ ] **Mask System:**
     -   [ ] Add a "Mask" state to the player (on/off).
     -   [ ] Create UI for toggling the mask.
