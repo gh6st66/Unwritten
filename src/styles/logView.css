@@ -1,0 +1,41 @@
+.log-view {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+    z-index: 100;
+    pointer-events: none;
+    max-width: 400px;
+}
+
+.log-message {
+    background: rgba(14, 18, 23, 0.9);
+    border: 1px solid #2b3442;
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: #e6edf3;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: slideInAndFadeOut 5s ease-out forwards;
+}
+
+@keyframes slideInAndFadeOut {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    10% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    90% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}

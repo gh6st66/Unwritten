@@ -22,7 +22,7 @@ export default function CollapseModal({ open, reason, summaryLog, onContinue }: 
           }
         </div>
         <button className="collapse-continue-button" onClick={onContinue}>
-          Begin Next Run
+          Inherit Echoes
         </button>
       </div>
     </div>

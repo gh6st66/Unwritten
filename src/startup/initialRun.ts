@@ -1,62 +1,51 @@
-import { RunState, WorldState, FactionState, RegionState, FactionId, JournalClaim, NewRunSeed } from "../core/types";
-import { deriveMaskAppearance } from "../systems/MaskEngine";
-import { claims } from "../data/claims";
 
-export function initialRun(seed: NewRunSeed): RunState {
-  const start = Date.now();
-  const ashvale: RegionState = { id: "ashvale", prosperity: 0, stability: 0, notoriety: 0, lastUpdatedAt: start };
-  const inquisitors: FactionState = { id: "inquisitors" as FactionId, attitude: 0, remembersMarks: {}, requiresUnmasking: true };
 
-  const world: WorldState = {
-    time: start,
-    regions: { ashvale },
-    factions: { [inquisitors.id]: inquisitors },
-    echoes: {},
-    scars: [],
-  };
+import { RunState, LegacyState, Claim } from "../core/types";
 
-  const chosenClaimDef = claims[Math.floor(Math.random() * claims.length)];
-  const chosenClaim: JournalClaim = {
-    ...chosenClaimDef,
-    issuedAt: start,
-  };
+// A stand-in for a real claim loader
+const getStartingClaim = (): Claim => ({
+    id: "HONOR_BOUND",
+    text: "It is written: You will uphold your honor, even at great cost.",
+    polarity: 1,
+    gravity: 2,
+});
 
-  const identity = {
-    runId: cryptoId(),
-    generationIndex: seed.runIndex,
-    marks: seed.startingMarks,
-    activeClaims: { [chosenClaim.id]: chosenClaim },
-    mask: { wearing: true, appearance: {} as any }, // set after state build
-    dispositions: {},
-  };
+export function initialRun(legacy: LegacyState | null): RunState {
 
   const state: RunState = {
-    identity,
-    world,
-    resources: {
-      energy: 10,
-      clarity: 5,
-      will: 5,
-      maxEnergy: 10,
-      maxClarity: 5,
-      maxWill: 5,
-      nextEnergyAt: start,
-      nextClarityAt: start,
-      nextWillAt: start,
-      // Intent resources
-      AGG: 3, WIS: 3, CUN: 3, AW: 1, AC: 1, WC: 1,
+    runId: crypto.randomUUID(),
+    rngSeed: Math.random().toString(36).slice(2),
+    claim: getStartingClaim(),
+    resources: { energy: 80, clarity: 60, will: 50, maxEnergy: 100, maxClarity: 100, maxWill: 100 },
+    traits: { AGG: 2, WIS: 3, CUN: 2, AGG_WIS: 1, AGG_CUN: 1, WIS_CUN: 1 },
+    marks: (legacy?.markCarry ?? []).map(mc => ({ 
+        id: mc.id, 
+        tier: mc.carriedTier, 
+        xp: 0, 
+        decaysPerRun: 1 
+    })),
+    dispositions: {},
+    mask: {
+        worn: true,
+        style: { strokes: 1, symmetry: 1, paletteKey: "default" },
+        derivedFromMarks: [],
     },
-    location: "ashvale:gate",
-    isAlive: true,
-    inventory: { items: {} },
+    time: 480, // Start at 8 AM
+    tension: 10,
+    locationId: "ashvale:gate",
+    echoesActive: [],
+    compendium: {},
+    log: [],
+    inventory: {},
+    scars: [],
+    regions: {
+      "ashvale": { prosperity: 0, notoriety: 0, stability: 0 },
+    },
     leads: {},
+    generationIndex: legacy?.runsCompleted ?? 0,
   };
 
-  // finalize mask appearance based on marks
-  state.identity.mask.appearance = deriveMaskAppearance(state);
-  return state;
-}
+  // TODO: Apply boons from legacy?.boons
 
-function cryptoId() {
-  return Math.random().toString(36).slice(2);
+  return state;
 }

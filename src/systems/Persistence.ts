@@ -1,21 +1,32 @@
-import { LegacyState, LegacyStateV1, RunOutcome } from "../core/types";
 
-const STORAGE_KEY = "unwritten_legacy_v1";
+import { LegacyState, RunState } from "../core/types";
+import { scoreEchoes } from "../core/echoes";
 
-function toLegacy(outcome: RunOutcome): LegacyStateV1 {
-  return {
-    schemaVersion: 1,
-    lastCompletedRun: outcome.runIndex,
-    carriedMarks: outcome.finalMarks
+const STORAGE_KEY = "unwritten_legacy_v2";
+
+export function saveLegacy(finalState: RunState): void {
+  const previousLegacy = loadLegacy() ?? {
+    echoesBank: [],
+    markCarry: [],
+    boons: [],
+    runsCompleted: 0,
+    compendiumProgress: {},
   };
-}
 
-export function saveRunOutcome(outcome: RunOutcome): void {
-  const legacy = toLegacy(outcome);
+  const newEchoSeeds = scoreEchoes(finalState);
+
+  const nextLegacy: LegacyState = {
+    echoesBank: [...previousLegacy.echoesBank, ...newEchoSeeds], // Simple accumulation for now
+    markCarry: finalState.marks.map(m => ({ id: m.id, carriedTier: m.tier })),
+    boons: previousLegacy.boons,
+    runsCompleted: previousLegacy.runsCompleted + 1,
+    compendiumProgress: { ...previousLegacy.compendiumProgress /* merge progress */},
+  };
+
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextLegacy));
   } catch (e) {
-    console.error("Failed to save run outcome:", e);
+    console.error("Failed to save legacy:", e);
   }
 }
 
@@ -24,10 +35,7 @@ export function loadLegacy(): LegacyState | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as LegacyState;
-    if (parsed.schemaVersion !== 1) {
-      console.warn("Legacy data is from an old version. Starting fresh.");
-      return null;
-    }
+    // Basic schema check could go here
     return parsed;
   } catch {
     console.error("Failed to parse legacy data.");

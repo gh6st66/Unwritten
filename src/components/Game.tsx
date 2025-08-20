@@ -1,39 +1,38 @@
+
+
+
 import React, { useState } from "react";
 import { useRun } from "../context/RunContext";
 import { NarrativeEventView } from "./NarrativeEventView";
 import { IntentBar } from "./IntentBar";
 import { JournalView } from "./JournalView";
-import { getMarkDef } from "../systems/Marks";
-import { MaskCultureModal } from "./MaskCultureModal";
+import { LOCATIONS } from "../data/locations";
+import { LogView } from "./LogView";
+import { Mark } from "../core/types";
+import { TriangleMeter } from "./TriangleMeter";
 
 export const Game: React.FC = () => {
-  const { state, availableEncounters, toggleMask, endRun } = useRun();
-  const masked = state.identity.mask.wearing;
-  const [showCultureModal, setShowCultureModal] = useState(false);
+  const { state } = useRun();
+  const { availableEncounters } = useRun();
+  const locationDef = LOCATIONS[state.locationId];
 
-  const dispositions = Object.entries(state.identity.dispositions)
+  const dispositions = Object.entries(state.dispositions)
     .filter(([, value]) => value !== 0)
     .sort(([, a], [, b]) => Math.abs(b) - Math.abs(a));
-
-  const handleEndRun = () => {
-    endRun({
-        reason: "choice",
-        summaryLog: ["You chose to end this path.", "The world remembers."],
-    });
-  };
 
   return (
     <>
       <div className="game">
         <header className="hud">
-          <div className="time">Run: {state.identity.generationIndex} | Time: {new Date(state.world.time).toLocaleString()}</div>
+          <div className="time">Location: {locationDef?.name ?? state.locationId} | Day: {Math.floor(state.time / 1440) + 1}</div>
           <div className="pools">
-            <span>Energy {state.resources.energy.toFixed(0)}/{state.resources.maxEnergy}</span>
-            <span>Clarity {state.resources.clarity.toFixed(0)}/{state.resources.maxClarity}</span>
-            <span>Will {state.resources.will.toFixed(0)}/{state.resources.maxWill}</span>
+            <span>Energy {state.resources.energy.toFixed(0)}</span>
+            <span>Clarity {state.resources.clarity.toFixed(0)}</span>
+            <span>Will {state.resources.will.toFixed(0)}</span>
           </div>
           <div className="mask">
-            <button onClick={toggleMask}>{masked ? "Remove Mask" : "Wear Mask"}</button>
+            {/* Mask toggle functionality to be re-implemented */}
+            <button>{state.mask.worn ? "Remove Mask" : "Wear Mask"}</button>
           </div>
         </header>
 
@@ -53,9 +52,9 @@ export const Game: React.FC = () => {
           <JournalView />
           <h3>Marks</h3>
           <ul>
-            {state.identity.marks.length === 0 && <li>None</li>}
-            {state.identity.marks.map(m => (
-              <li key={m.id}>{getMarkDef(m.id).name} • intensity {m.intensity}</li>
+            {state.marks.length === 0 && <li>None</li>}
+            {state.marks.map((m: Mark) => (
+              <li key={m.id}>{m.id} | Tier {m.tier > 0 ? '+' : ''}{m.tier} (XP: {m.xp})</li>
             ))}
           </ul>
           <h3>Dispositions</h3>
@@ -65,18 +64,23 @@ export const Game: React.FC = () => {
               <li key={key}>{key}: {value.toFixed(2)}</li>
             ))}
           </ul>
-          <h3>Inventory</h3>
-          <ul>
-            {Object.values(state.inventory?.items ?? {}).length === 0 && <li>Empty</li>}
-            {Object.values(state.inventory?.items ?? {}).map(it => (
-              <li key={it.id}>{it.label} × {it.qty}</li>
-            ))}
-          </ul>
-          <button onClick={() => setShowCultureModal(true)} style={{marginTop: "20px", width: "100%"}}>Inspect Regional Masks</button>
-          <button onClick={handleEndRun} style={{marginTop: "10px", width: "100%"}}>End Run (Dev)</button>
+          <h3>Traits</h3>
+          <TriangleMeter
+              className="h-48 w-48 mx-auto my-4"
+              aggression={state.traits.AGG}
+              wisdom={state.traits.WIS}
+              cunning={state.traits.CUN}
+              conviction={state.traits.AGG_WIS}
+              guile={state.traits.AGG_CUN}
+              insight={state.traits.WIS_CUN}
+              unwrittenTokens={Math.floor(state.tension / 33.4)}
+              unwrittenUnstable={state.tension > 75}
+              maxScale={5}
+              showNumbers={true}
+            />
         </aside>
+        <LogView />
       </div>
-      {showCultureModal && <MaskCultureModal state={state} onClose={() => setShowCultureModal(false)} />}
     </>
   );
 };

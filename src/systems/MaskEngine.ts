@@ -2,7 +2,7 @@ import { MaskAppearance, RunState } from "../core/types";
 
 // Deterministic but slowly evolving signature derived from marks
 export function deriveMaskAppearance(s: RunState): MaskAppearance {
-  const markKeys = Object.values(s.identity.marks).sort((a, b) => b.intensity - a.intensity).map(m => m.id);
+  const markKeys = Object.values(s.marks).sort((a, b) => b.tier - a.tier).map(m => m.id);
   const seed = markKeys.join("|") || "blank";
   // Extremely simple “hash” → use to pick variants
   const sum = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0);

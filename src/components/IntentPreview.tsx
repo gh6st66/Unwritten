@@ -1,11 +1,12 @@
-import React from "react";
-import { IntentScore } from "../systems/intent/IntentEngine";
-import { IntentKind } from "../systems/intent/IntentTypes";
 
-export function IntentPreview({ kind, score }: { kind: IntentKind; score: IntentScore | null }) {
+import React from "react";
+import { Intent } from "../core/types";
+import { Preview } from "../core/intent";
+
+export function IntentPreview({ kind, score }: { kind: Intent; score: Preview | null }) {
   if (!score) return null;
 
-  const costString = Object.entries(score.projectedCost)
+  const costString = Object.entries(score.projectedCosts)
     .filter(([,v]) => v && v > 0)
     .map(([k,v]) => `${k}:${v}`)
     .join(" ") || "None";
@@ -19,7 +20,7 @@ export function IntentPreview({ kind, score }: { kind: IntentKind; score: Intent
       </div>
        <div className="intent-detail">
         <span>Tension</span>
-        <span>{(score.narrativeTension * 100).toFixed(0)}%</span>
+        <span>{(score.projectedTension).toFixed(0)}%</span>
       </div>
        <div className="intent-detail">
         <span>Cost</span>

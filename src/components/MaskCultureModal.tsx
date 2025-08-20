@@ -30,7 +30,7 @@ export const MaskCultureModal: React.FC<Props> = ({ state, onClose }) => {
           worldSeed: 1234, // Placeholder worldSeed
           x,
           y,
-          era: Math.floor(state.identity.generationIndex / 10), // Era changes every 10 runs
+          era: Math.floor(state.generationIndex / 10), // Era changes every 10 runs
         };
 
         const generatedCulture = await generateRegionCulture(ctx);
