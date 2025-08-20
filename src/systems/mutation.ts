@@ -1,4 +1,4 @@
-import { EffectFn, RunState, Mark, MarkId } from "../core/types";
+import { EffectFn, RunState } from "../core/types";
 import { clamp } from "./math";
 
 export function applyOptionEffects(s: RunState, effects: EffectFn[]): RunState {
@@ -19,24 +19,10 @@ export const recordScar = (key: string): EffectFn => (s: RunState) => {
 };
 
 export const addMarkByLabel = (label: string, strengthDelta: number): EffectFn => (s: RunState) => {
-  const existing = Object.values(s.identity.marks).find(m => m.label.toUpperCase() === label.toUpperCase());
-  const now = s.world.time;
-  
-  if (existing) {
-    const nextStrength = clamp(existing.strength + strengthDelta, 1, 3) as Mark["strength"];
-    const updatedMark: Mark = { ...existing, strength: nextStrength, lastRefreshedAt: now };
-    return { ...s, identity: { ...s.identity, marks: { ...s.identity.marks, [existing.id]: updatedMark }}};
-  } else {
-    const id = label.toUpperCase() as MarkId;
-    const newMark: Mark = {
-      id,
-      label,
-      strength: clamp(strengthDelta, 1, 3) as Mark["strength"],
-      createdAt: now,
-      lastRefreshedAt: now,
-    };
-    return { ...s, identity: { ...s.identity, marks: { ...s.identity.marks, [id]: newMark }}};
-  }
+    // This function is now deprecated and will be removed.
+    // Use the new `applyMark` system in `Marks.ts` instead.
+    console.warn("addMarkByLabel is deprecated.");
+    return s;
 };
 
 export const adjustDisposition = (key: string, delta: number): EffectFn => (s: RunState) => {

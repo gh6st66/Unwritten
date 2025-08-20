@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useMemo, useState, useCallback } from "react";
-import { RunState, EncounterDef, EncounterOption } from "../core/types";
+import { RunState, EncounterDef, MarkId } from "../core/types";
 import { now, applyTimeCost, refillTick } from "../systems/timeUtils";
 import { journalResist, journalAccept } from "../systems/JournalEngine";
-import { applyOptionEffects, addMarkByLabel, adjustDisposition } from "../systems/mutation";
+import { applyOptionEffects, adjustDisposition } from "../systems/mutation";
 import { encounters } from "../data/encounters";
 import { IntentContext, resolveIntent } from "../systems/intent/IntentEngine";
 import { TraitKey } from "../systems/intent/IntentTypes";
+import { invertMark } from "../systems/Marks";
+import { CollapseTrigger } from "../systems/RunManager";
 
 type RunCtx = {
   state: RunState;
@@ -13,6 +15,7 @@ type RunCtx = {
   availableEncounters: EncounterDef[];
   choose: (encounterId: string, optionId: string) => void;
   toggleMask: () => void;
+  endRun: (trigger: CollapseTrigger) => void;
 };
 
 const RunContext = createContext<RunCtx | null>(null);
@@ -22,7 +25,11 @@ export const useRun = () => {
   return ctx;
 };
 
-export const RunProvider: React.FC<{ initial: RunState; children: React.ReactNode }> = ({ initial, children }) => {
+export const RunProvider: React.FC<{ 
+    initial: RunState; 
+    children: React.ReactNode;
+    onCollapse: (finalState: RunState, trigger: CollapseTrigger) => void;
+}> = ({ initial, children, onCollapse }) => {
   const [state, setState] = useState<RunState>(initial);
 
   // Tick passive refills on read
@@ -41,6 +48,10 @@ export const RunProvider: React.FC<{ initial: RunState; children: React.ReactNod
       },
     }));
   }, []);
+
+  const endRun = useCallback((trigger: CollapseTrigger) => {
+    onCollapse(state, trigger);
+  }, [onCollapse, state]);
 
   const choose = useCallback((encounterId: string, optionId: string) => {
     setState(s => {
@@ -71,7 +82,6 @@ export const RunProvider: React.FC<{ initial: RunState; children: React.ReactNod
             optionRiskDelta: opt.intent.riskDelta,
             optionSubtletyDelta: opt.intent.subtletyDelta,
             successCap: opt.intent.successCap,
-            // These can be passed in from encounter def later
             claimPressure: 0, 
             difficultyMod: 0
         };
@@ -83,13 +93,15 @@ export const RunProvider: React.FC<{ initial: RunState; children: React.ReactNod
             const k = key as TraitKey;
             next.resources[k] = Math.max(0, (next.resources[k] ?? 0) - (value ?? 0));
         }
-
-        // Apply identity mutations
-        for(const m of outcome.marksDelta ?? []) {
-            next = addMarkByLabel(m.id, m.delta)(next);
-        }
+        
+        // Handle dispositions
         for(const d of outcome.dispositionsDelta ?? []) {
             next = adjustDisposition(d.key, d.delta)(next);
+        }
+        
+        // Handle mark inversion on success
+        if (outcome.succeeded && opt.invertsMarkId) {
+          next = { ...next, identity: { ...next.identity, marks: invertMark(next.identity.marks, opt.invertsMarkId as MarkId, next.identity.generationIndex)}};
         }
 
         // Apply branch effects from onResolve
@@ -108,7 +120,7 @@ export const RunProvider: React.FC<{ initial: RunState; children: React.ReactNod
   }, []);
 
   return (
-    <RunContext.Provider value={{ state: hydrated, setState, availableEncounters, choose, toggleMask }}>
+    <RunContext.Provider value={{ state: hydrated, setState, availableEncounters, choose, toggleMask, endRun }}>
       {children}
     </RunContext.Provider>
   );

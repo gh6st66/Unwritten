@@ -11,11 +11,11 @@ export type Timestamp = number; // ms since epoch
 export type RunId = string;
 export type RegionId = string;
 export type LocationId = string;
-export type EncounterId = string;
-export type MarkId = Brand<string, "MarkId">;
+export type MarkId = string;
 export type EchoId = string;
 export type ClaimId = string;
 export type ItemId = string;
+export type EncounterId = string;
 export type FactionId = Brand<string, "FactionId">;
 
 // --- TIME & COST ---
@@ -34,24 +34,31 @@ export interface JournalClaim {
   severity: "minor" | "major" | "existential";
 }
 
-export type MarkStrength = 1 | 2 | 3; // 3 = strongest (fresh), 1 = faint rumor
+// --- MARKS ---
+export type MarkPolarity = "positive" | "negative";
 
-export interface Mark {
+export interface MarkDef {
   id: MarkId;
-  label: string;                // OATHBREAKER, LOYALIST, etc.
-  strength: MarkStrength;
-  createdAt: Timestamp;
-  lastRefreshedAt: Timestamp;   // bump when renewed/reinforced
-  invertToId?: MarkId;
+  name: string;
+  polarity: MarkPolarity;
+  opposite?: MarkId;        // OATHBREAKER -> LOYALIST
+  maxIntensity: number;     // 1..N, caps stacking
+  decayRatePerRun: number;  // how much intensity drops per run without reinforcement
 }
 
+export interface MarkState {
+  id: MarkId;
+  intensity: number;        // integer [0..maxIntensity]
+  acquiredAtRun: number;    // run index when first seen
+  lastReinforcedRun: number;// run index last time it was triggered/affirmed
+}
 
 export interface Echo {
   id: EchoId;
   originRunId: RunId;
   manifestation: "npc" | "faction" | "site" | "artifact";
   reference: string;            // e.g. NPC id, site id, artifact slug
-  freshness: MarkStrength;      // echo also fades over generations
+  freshness: number;      // echo also fades over generations
   note?: string;
 }
 
@@ -79,7 +86,7 @@ export interface RegionState {
 export interface FactionState {
   id: FactionId;
   attitude: -100 | -50 | 0 | 25 | 50 | 75 | 100; // coarse for readability
-  remembersMarks: Record<MarkId, MarkStrength>;   // independent decay curve per faction
+  remembersMarks: Record<MarkId, number>;   // independent decay curve per faction
   requiresUnmasking?: boolean;  // rituals, courts, inquisitions
 }
 
@@ -91,7 +98,7 @@ export interface WorldState {
   scars: string[]; // e.g. "village:ashvale_abandoned@1680000000000"
 }
 
-export type PlayerMarks = Record<MarkId, Mark>;
+export type PlayerMarks = MarkState[];
 export type Dispositions = Record<string, number>;
 
 export interface RunIdentity {
@@ -153,6 +160,7 @@ export interface EncounterOption {
   requiresUnmasked?: boolean;       // forces recognition moment
   resistClaimId?: ClaimId;          // attempt to resist this claim
   acceptClaimId?: ClaimId;          // willingly cement this claim
+  invertsMarkId?: MarkId;           // attempt to invert this mark
   effects?: EffectFn[];             // world/identity mutations (legacy/simple)
   
   // New Intent System properties
@@ -179,4 +187,25 @@ export interface RunState {
   isAlive: boolean;
   inventory?: Inventory;
   leads?: Record<ItemId, number>; // 0..100 bonus to find chance from prior attempts
+}
+
+// --- RUN & LEGACY ---
+export interface LegacyStateV1 {
+  schemaVersion: 1;
+  lastCompletedRun: number;    // run index that just ended
+  carriedMarks: MarkState[];   // post-collapse, pre-next-run
+}
+
+export type LegacyState = LegacyStateV1;
+
+export interface RunOutcome {
+  reason: "defeat" | "entropy" | "choice" | "escape";
+  summaryLog: string[];         // short lines for journal recap
+  finalMarks: MarkState[];      // marks at collapse time
+  runIndex: number;             // current run index
+}
+
+export interface NewRunSeed {
+  runIndex: number;
+  startingMarks: MarkState[]; // inherited + decayed
 }

@@ -4,7 +4,7 @@ This document outlines the development plan to evolve the game based on the new 
 
 ---
 
-## Phase 1: Foundational Refactor (Current)
+## Phase 1: Foundational Refactor
 
 *Goal: Strip out the legacy combat systems and reshape the core application structure to support a purely narrative roguelike experience.*
 
@@ -15,16 +15,16 @@ This document outlines the development plan to evolve the game based on the new 
 
 ---
 
-## Phase 2: Implementing the Core Loop
+## Phase 2: Implementing the Core Loop (Current)
 
 *Goal: Build the essential mechanics of the new game loop as defined in the design document.*
 
--   [ ] **Journal System:** Implement the "Journal Writes" mechanic, where a run begins with an imposed "fate-claim" that acts as a central conflict.
--   [ ] **Mark Inversion:** Add the "Redemption" mechanic, allowing players to complete specific objectives to invert a negative Mark (e.g., `OATHBREAKER` -> `LOYALIST`).
--   [ ] **Run Collapse & Inheritance:**
-    -   [ ] Implement the "Collapse" event that ends a run.
-    -   [ ] Build the persistence layer that allows the next run to "Inherit" the Marks from the previous one.
-    -   [ ] Implement the Mark "Decay" system, where inherited Marks weaken over several runs if not reinforced.
+-   [x] **Journal System:** Implement the "Journal Writes" mechanic, where a run begins with an imposed "fate-claim" that acts as a central conflict.
+-   [x] **Mark Inversion:** Add the "Redemption" mechanic, allowing players to complete specific objectives to invert a negative Mark (e.g., `OATHBREAKER` -> `LOYALIST`).
+-   [x] **Run Collapse & Inheritance:**
+    -   [x] Implement the "Collapse" event that ends a run.
+    -   [x] Build the persistence layer that allows the next run to "Inherit" the Marks from the previous one.
+    -   [x] Implement the Mark "Decay" system, where inherited Marks weaken over several runs if not reinforced.
 -   [ ] **Time as a Resource:** Integrate a simple time mechanic where making choices at map nodes consumes time, progressing a global "Entropy" clock.
 
 ---

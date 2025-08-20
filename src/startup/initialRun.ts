@@ -1,7 +1,8 @@
-import { RunState, WorldState, FactionState, RegionState, FactionId } from "../core/types";
+import { RunState, WorldState, FactionState, RegionState, FactionId, JournalClaim, NewRunSeed } from "../core/types";
 import { deriveMaskAppearance } from "../systems/MaskEngine";
+import { claims } from "../data/claims";
 
-export function initialRun(): RunState {
+export function initialRun(seed: NewRunSeed): RunState {
   const start = Date.now();
   const ashvale: RegionState = { id: "ashvale", prosperity: 0, stability: 0, notoriety: 0, lastUpdatedAt: start };
   const inquisitors: FactionState = { id: "inquisitors" as FactionId, attitude: 0, remembersMarks: {}, requiresUnmasking: true };
@@ -14,11 +15,17 @@ export function initialRun(): RunState {
     scars: [],
   };
 
+  const chosenClaimDef = claims[Math.floor(Math.random() * claims.length)];
+  const chosenClaim: JournalClaim = {
+    ...chosenClaimDef,
+    issuedAt: start,
+  };
+
   const identity = {
     runId: cryptoId(),
-    generationIndex: 0,
-    marks: {},
-    activeClaims: {},
+    generationIndex: seed.runIndex,
+    marks: seed.startingMarks,
+    activeClaims: { [chosenClaim.id]: chosenClaim },
     mask: { wearing: true, appearance: {} as any }, // set after state build
     dispositions: {},
   };
@@ -45,7 +52,7 @@ export function initialRun(): RunState {
     leads: {},
   };
 
-  // finalize mask appearance based on marks (none at start → blank-ish)
+  // finalize mask appearance based on marks
   state.identity.mask.appearance = deriveMaskAppearance(state);
   return state;
 }
