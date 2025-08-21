@@ -1,4 +1,6 @@
-import { FactionDef, NPC, Region } from "../gen";
+import { World } from "../world/types";
+import { Civilization } from "../civ/types";
+import { ForgeTemplate, LearnedWord } from "../systems/maskforging/types";
 
 export type Phase =
   | "TITLE"
@@ -11,9 +13,25 @@ export type Phase =
   | "RESOLVE"
   | "COLLAPSE";
 
-export type ResourceId = "TIME" | "CLARITY" | "CURRENCY";
+export enum ResourceId {
+  TIME = "TIME",
+  CLARITY = "CLARITY",
+  CURRENCY = "COIN",
+}
 
 export type Resources = Record<ResourceId, number>;
+
+export type Effect = {
+  resource: ResourceId;
+  delta: number;
+};
+
+export type ActionOutcome = {
+  id: string;
+  label: string;
+  effects: Effect[];
+  grantsMarks?: Mark[];
+};
 
 export type WorldSeed = {
   id: string;
@@ -23,7 +41,7 @@ export type WorldSeed = {
 
 export type Claim = {
   id: string;
-  text: string;           // e.g., "You betray allies."
+  text: string;
   severity: 1 | 2 | 3;
   embrace: {
     label: string;
@@ -36,10 +54,12 @@ export type Claim = {
 };
 
 export type Mark = {
-  id: string;             // reputation tag
+  id: string;
   label: string;
-  value: number;          // -3..+3
+  value: number;
 };
+
+export type MaskStyle = { strokes: number; symmetry: number; paletteKey: string; };
 
 export type Mask = {
   name: string;
@@ -54,42 +74,36 @@ export type Player = {
   resources: Resources;
   marks: Mark[];
   mask: Mask | null;
+  learnedWords: string[];
 };
 
 export type Encounter = {
   id: string;
-  prompt: string;         // what the player reads
-  options: Array<{
-    id: string;
-    label: string;
-    costs?: Partial<Resources>;
-    effects?: Partial<Resources>;
-    grantsMarks?: Mark[];
-  }>;
-  internalThoughtHint?: string; // short bracketed whisper
+  prompt: string;
+  options: ActionOutcome[];
+  internalThoughtHint?: string;
 };
 
 export type WorldData = {
-  regions: Region[];
-  factions: FactionDef[];
-  npcs: NPC[];
+  world: World | null;
+  civs: Civilization[];
 };
 
 export type GameScreen =
   | { kind: "TITLE" }
   | { kind: "SEED_SELECTION"; seeds: WorldSeed[] }
-  | { kind: "FORGE_MASK"; seedTitle: string }
+  | { kind: "FORGE_MASK"; seedTitle: string; forge: ForgeTemplate; learnedWords: LearnedWord[] }
   | { kind: "CLAIM"; claim: Claim }
   | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' }
-  | { kind: "ENCOUNTER"; encounter: Encounter }
+  | { kind: "ENCOUNTER"; encounter: Encounter; playerResources: Resources }
   | { kind: "RESOLVE"; summary: string }
   | { kind: "COLLAPSE"; reason: string };
 
 export type GameEvent =
   | { type: "REQUEST_NEW_RUN" }
   | { type: "START_RUN"; seed: WorldSeed }
-  | { type: "WORLD_GENERATED"; world: WorldData }
-  | { type: "FORGE_MASK"; input: string }
+  | { type: "WORLD_GENERATED"; world: World; civs: Civilization[] }
+  | { type: "FORGE_MASK"; wordId: string }
   | { type: "MASK_FORGED"; mask: Mask }
   | { type: "ACCEPT_CLAIM"; claim: Claim; approach: 'embrace' | 'resist' }
   | { type: "GENERATE_ENCOUNTER" }
@@ -109,6 +123,7 @@ export type GameState = {
   runId: string;
   activeClaim: Claim | null;
   activeSeed: WorldSeed | null;
+  activeForgeId: string | null;
   forgingInput: string | null;
   day: number;
 };
@@ -119,8 +134,8 @@ export type Affiliation =
   | "inquisition" | "clergy" | "bureaucracy" | "academy" | "guild" | "military" | "rural" | "urban" | "commoner" | "outlaw";
 
 export interface SpeakerContext {
-  locale: string;           // e.g., "en-US"
-  region: RegionCode;       // coarse dialect selection
-  affiliations: Affiliation[]; // ordered by strength: strongest first
-  role?: string;            // freeform hint, e.g., "High Inquisitor", "Village Priest"
+  locale: string;
+  region: RegionCode;
+  affiliations: Affiliation[];
+  role?: string;
 }

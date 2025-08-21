@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useEngine } from "../game/engine";
 import { ScreenRenderer } from "./ScreenRenderer";
-import { GameState, Claim, WorldSeed } from "../game/types";
+import { GameState, Claim, WorldSeed, ResourceId } from "../game/types";
 import { GlossaryView } from "./GlossaryView";
 import { glossaryData } from "../data/glossary";
 import { LoadingScreen } from "./LoadingScreen";
@@ -15,8 +15,8 @@ export default function App() {
     send({ type: 'START_RUN', seed });
   };
 
-  const onForgeMask = (input: string) => {
-    send({ type: 'FORGE_MASK', input });
+  const onForgeMask = (wordId: string) => {
+    send({ type: 'FORGE_MASK', wordId });
   };
 
   const onAdvance = (to: "ENCOUNTER" | "COLLAPSE") => {
@@ -88,7 +88,7 @@ function Header({ state }: { state: GameState }) {
     <div className="p-3 flex items-center justify-between border-b">
       <div className="font-semibold">{maskName ? `The ${maskName}` : `Phase: ${state.phase}`}</div>
       <div className="text-sm">
-        TIME {r.TIME} · CLARITY {r.CLARITY} · COIN {r.CURRENCY}
+        TIME {r[ResourceId.TIME]} · CLARITY {r[ResourceId.CLARITY]} · COIN {r[ResourceId.CURRENCY]}
       </div>
     </div>
   );

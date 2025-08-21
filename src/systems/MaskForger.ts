@@ -4,6 +4,7 @@
 */
 import { GoogleGenAI, Type } from "@google/genai";
 import { Mask, WorldSeed } from "../game/types";
+import { ForgeTemplate } from "./maskforging/types";
 
 const TEXT_MODEL = "gemini-2.5-flash";
 const IMAGE_MODEL = "imagen-3.0-generate-002";
@@ -15,9 +16,9 @@ export class MaskForger {
     this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
   }
 
-  public async forge(playerInput: string, seed: WorldSeed): Promise<Mask> {
-    const textDetails = await this.generateTextDetails(playerInput, seed);
-    const imageUrl = await this.generateMaskImage(textDetails.description);
+  public async forge(wordId: string, seed: WorldSeed, forge: ForgeTemplate): Promise<Mask> {
+    const textDetails = await this.generateTextDetails(wordId, seed, forge);
+    const imageUrl = await this.generateMaskImage(textDetails.description, forge, wordId);
 
     return {
       ...textDetails,
@@ -25,17 +26,23 @@ export class MaskForger {
     };
   }
 
-  private async generateTextDetails(playerInput: string, seed: WorldSeed): Promise<Omit<Mask, 'imageUrl'>> {
+  private async generateTextDetails(wordId: string, seed: WorldSeed, forge: ForgeTemplate): Promise<Omit<Mask, 'imageUrl'>> {
+    const twist = forge.wordModifiers[wordId] ?? forge.defaultTwist;
+
     const prompt = [
-      "System: You are a myth-maker for a dark fantasy roguelike. Generate a JSON object for a character's first mask based on their chosen portent and a core memory.",
+      "System: You are a myth-maker for a dark fantasy roguelike. Generate a JSON object for a character's first mask based on a portent, a forge, and an inscribed word.",
       "Rules:",
       "- The JSON MUST have `name` (string, 1-3 words), `description` (string, evocative, 2-3 sentences), and `grantedMarks` (array of 1-2 objects with `id`, `label`, `value`).",
-      "- The `id` for marks should be a simple, machine-readable string (e.g., 'haunted-past', 'oath-of-vengeance').",
+      "- The `name` should be creative and related to the twisted word name.",
+      "- The `description` should incorporate the visual style of the twist and the portent's theme.",
+      "- The `id` for marks should be a simple, machine-readable string (e.g., 'salt-ash-corrosion', 'tide-blade-fury').",
       "- The `value` for marks should be `1`.",
-      "- The mask's theme should blend the portent's concept with the player's memory.",
       "- The tone is somber and mystical.",
       `Portent: "${seed.description}"`,
-      `Memory: "${playerInput}"`,
+      `Forge: "${forge.name} - ${forge.location.description}"`,
+      `Inscribed Word: "${wordId}" which becomes "${twist.name}" at this forge.`,
+      `Twist Flavor: "${twist.flavor}"`,
+      `Twist Effect (for inspiration): "${twist.effect}"`,
     ].join("\n");
 
     const res = await this.ai.models.generateContent({
@@ -75,8 +82,9 @@ export class MaskForger {
     }
   }
 
-  private async generateMaskImage(description: string): Promise<string> {
-    const prompt = `A single, haunted mask, portrait style, on a black background. Dark fantasy oil painting. The mask is described as: "${description}". Cinematic lighting, intricate details, moody, atmospheric.`;
+  private async generateMaskImage(description: string, forge: ForgeTemplate, wordId: string): Promise<string> {
+    const twist = forge.wordModifiers[wordId] ?? forge.defaultTwist;
+    const prompt = `A single, haunted mask, portrait style, on a black background. Dark fantasy oil painting. The mask is described as: "${description}". Visual keywords for the mask: ${twist.visual}. Visual keywords for the environment: ${forge.location.visuals.join(", ")}. Cinematic lighting, intricate details, moody, atmospheric.`;
     
     const res = await this.ai.models.generateImages({
         model: IMAGE_MODEL,

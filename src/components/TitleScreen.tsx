@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import styles from "./title/TitleScreen.module.css";
 
 type Props = {
   onNewRun: () => void;
@@ -47,25 +46,25 @@ const TitleScreen: React.FC<Props> = ({
   };
 
   return (
-    <div ref={rootRef} className={[styles.root, className].filter(Boolean).join(" ")}>
-      <div aria-hidden className={styles.bg} />
-      <div aria-hidden className={styles.vignette} />
-      <div aria-hidden className={styles.inkDrift} />
+    <div ref={rootRef} className={["TitleScreen_root", className].filter(Boolean).join(" ")}>
+      <div aria-hidden className="TitleScreen_bg" />
+      <div aria-hidden className="TitleScreen_vignette" />
+      <div aria-hidden className="TitleScreen_inkDrift" />
 
-      <header className={styles.centerBlock}>
-        <div className={styles.markIcon} aria-hidden />
-        <h1 className={styles.title} aria-label="The Unwritten">
-          <span className={styles.titleLine}>The</span>
-          <span className={styles.titleLineAccent}>Unwritten</span>
+      <header className="TitleScreen_centerBlock">
+        <div className="TitleScreen_markIcon" aria-hidden />
+        <h1 className="TitleScreen_title" aria-label="The Unwritten">
+          <span className="TitleScreen_titleLine">The</span>
+          <span className="TitleScreen_titleLineAccent">Unwritten</span>
         </h1>
       </header>
 
-      <nav className={styles.menu} aria-label="Main">
-        <ul role="menu" className={styles.menuList}>
+      <nav className="TitleScreen_menu" aria-label="Main">
+        <ul role="menu" className="TitleScreen_menuList">
           <li role="none">
             <button
               role="menuitem"
-              className={styles.menuBtn}
+              className="TitleScreen_menuBtn"
               onClick={onContinue}
               disabled={!canContinue || !onContinue}
               aria-disabled={!canContinue || !onContinue}
@@ -77,7 +76,7 @@ const TitleScreen: React.FC<Props> = ({
           <li role="none">
             <button
               role="menuitem"
-              className={styles.menuBtn}
+              className="TitleScreen_menuBtn"
               onClick={handleStart}
               data-focus-target="new-run"
             >
@@ -85,30 +84,30 @@ const TitleScreen: React.FC<Props> = ({
             </button>
           </li>
           <li role="none">
-            <button role="menuitem" className={styles.menuBtn} onClick={onOpenGlossary}>
+            <button role="menuitem" className="TitleScreen_menuBtn" onClick={onOpenGlossary}>
               Glossary
             </button>
           </li>
           <li role="none">
-            <button role="menuitem" className={styles.menuBtn} onClick={onOpenSettings}>
+            <button role="menuitem" className="TitleScreen_menuBtn" onClick={onOpenSettings}>
               Settings
             </button>
           </li>
         </ul>
       </nav>
 
-      <div className={styles.footer}>
-        <span className={styles.hint} aria-hidden>
+      <div className="TitleScreen_footer">
+        <span className="TitleScreen_hint" aria-hidden>
           ↵ Enter to select • ↑↓ to move
         </span>
-        {version ? <span className={styles.version}>v{version}</span> : null}
+        {version ? <span className="TitleScreen_version">v{version}</span> : null}
       </div>
 
       <div
         aria-hidden
         className={[
-          styles.inkTransition,
-          transitioning ? styles.inkTransitionActive : "",
+          "TitleScreen_inkTransition",
+          transitioning ? "TitleScreen_inkTransitionActive" : "",
         ].join(" ")}
       />
     </div>

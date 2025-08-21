@@ -1,5 +1,8 @@
-import { GameEvent, GameState, Resources, Mark, Claim, WorldSeed } from "./types";
+import { GameEvent, GameState, Resources, Mark, Claim, WorldSeed, ResourceId, ActionOutcome } from "./types";
 import { worldSeeds } from "../data/worldSeeds";
+import { FORGES_DATA } from "../data/forges";
+import { LEARNED_WORDS } from "../data/learnedWords";
+import { apply, canApply } from "../systems/resourceEngine";
 
 const STORAGE_KEY = "unwritten:v1";
 
@@ -13,29 +16,24 @@ export const INITIAL: GameState = {
   runId: "none",
   activeClaim: null,
   activeSeed: null,
+  activeForgeId: null,
   forgingInput: null,
   day: 1,
   world: {
-    regions: [],
-    factions: [],
-    npcs: [],
+    world: null,
+    civs: [],
   },
   player: {
     id: "p1",
     name: "The Unwritten",
-    resources: { TIME: 6, CLARITY: 3, CURRENCY: 0 },
+    resources: { [ResourceId.TIME]: 6, [ResourceId.CLARITY]: 3, [ResourceId.CURRENCY]: 0 },
     marks: [],
     mask: null,
+    learnedWords: ["ASH", "ECHO", "BIND"], // Starter words
   },
   screen: { kind: "TITLE" }
 };
 
-
-const clampRes = (r: Resources) => ({
-  TIME: Math.max(0, r.TIME),
-  CLARITY: Math.max(0, r.CLARITY),
-  CURRENCY: Math.max(0, r.CURRENCY),
-});
 
 export function reduce(state: GameState, ev: GameEvent): GameState {
   switch (ev.type) {
@@ -57,18 +55,21 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     }
     case "WORLD_GENERATED": {
       if (!state.activeSeed) return state; // Should not happen
+      const activeForge = FORGES_DATA[0]; // Select the first forge for now
+      const learnedWords = LEARNED_WORDS.filter(w => state.player.learnedWords.includes(w.id));
       return {
         ...state,
         phase: "FORGE_MASK",
-        world: ev.world,
-        screen: { kind: "FORGE_MASK", seedTitle: state.activeSeed.title },
+        world: { world: ev.world, civs: ev.civs },
+        activeForgeId: activeForge.id,
+        screen: { kind: "FORGE_MASK", seedTitle: state.activeSeed.title, forge: activeForge, learnedWords },
       }
     }
     case "FORGE_MASK": {
       return {
         ...state,
         phase: "LOADING",
-        forgingInput: ev.input,
+        forgingInput: ev.wordId, // Using forgingInput to pass the wordId
         screen: { kind: "LOADING", message: "The mask takes form in the ether...", context: "MASK" }
       };
     }
@@ -113,7 +114,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       return {
         ...state,
         phase: "ENCOUNTER",
-        screen: { kind: "ENCOUNTER", encounter: ev.encounter }
+        screen: { kind: "ENCOUNTER", encounter: ev.encounter, playerResources: state.player.resources }
       };
     }
     case "GENERATION_FAILED": {
@@ -126,14 +127,9 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     case "CHOOSE_OPTION": {
       if (state.screen.kind !== "ENCOUNTER") return state;
       const opt = state.screen.encounter.options.find(o => o.id === ev.optionId);
-      if (!opt) return state;
+      if (!opt || !canApply(state.player.resources, opt)) return state;
 
-      // apply costs/effects
-      const nextRes: Resources = clampRes({
-        TIME: state.player.resources.TIME - (opt.costs?.TIME ?? 0) + (opt.effects?.TIME ?? 0),
-        CLARITY: state.player.resources.CLARITY - (opt.costs?.CLARITY ?? 0) + (opt.effects?.CLARITY ?? 0),
-        CURRENCY: state.player.resources.CURRENCY - (opt.costs?.CURRENCY ?? 0) + (opt.effects?.CURRENCY ?? 0),
-      });
+      const nextRes = apply(state.player.resources, opt);
 
       const collapse = nextRes.TIME <= 0 ? "Out of time." : null;
 

@@ -4,46 +4,49 @@
 */
 import React, { useState } from 'react';
 import '../styles/maskForging.css';
+import { ForgeTemplate, LearnedWord } from '../systems/maskforging/types';
 
 interface Props {
   seedTitle: string;
-  onForge: (input: string) => void;
+  forge: ForgeTemplate;
+  learnedWords: LearnedWord[];
+  onForge: (wordId: string) => void;
 }
 
-export const MaskForgingView: React.FC<Props> = ({ seedTitle, onForge }) => {
-  const [input, setInput] = useState('');
-
-  const handleForge = () => {
-    if (input.trim()) {
-      onForge(input.trim());
-    }
-  };
+export const MaskForgingView: React.FC<Props> = ({ seedTitle, forge, learnedWords, onForge }) => {
+  const [selectedWord, setSelectedWord] = useState<LearnedWord | null>(null);
 
   return (
     <div className="mask-forging-container">
       <div className="mask-forging-header">
         <p className="portent-label">Your Portent:</p>
         <h1 className="portent-title">{seedTitle}</h1>
+        <p className="forge-flavor">{forge.entryFlavor}</p>
       </div>
       
       <div className="mask-forging-prompt">
-        <label htmlFor="mask-input" className="prompt-label">
-            To forge your first mask, inscribe a memory, a hope, or a fear.
+        <label className="prompt-label">
+          Inscribe a Learned Word to define the mask's essence.
         </label>
-        <textarea
-          id="mask-input"
-          className="prompt-textarea"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="e.g., The memory of a promise broken by winter's first snow..."
-          rows={4}
-        />
+        
+        <div className="learned-words-grid">
+          {learnedWords.map(word => (
+            <button
+              key={word.id}
+              className={`word-button ${selectedWord?.id === word.id ? 'selected' : ''}`}
+              onClick={() => setSelectedWord(word)}
+            >
+              <span className="word-id">{word.id}</span>
+              <span className="word-category">{word.category}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <button
         className="forge-button"
-        onClick={handleForge}
-        disabled={!input.trim()}
+        onClick={() => selectedWord && onForge(selectedWord.id)}
+        disabled={!selectedWord}
       >
         Forge the Mask
       </button>

@@ -4,13 +4,14 @@ import { OptionDetail } from "./OptionDetail";
 import { SeedSelectionView } from "./SeedSelectionView";
 import { MaskForgingView } from "./MaskForgingView";
 import { resolveLexeme } from "../systems/lexicon/resolveLexeme";
+import { canApply } from "../systems/resourceEngine";
 
 type Props = {
   screen: GameScreen;
   onAction: (id: string) => void;
   onAdvance: (to: "ENCOUNTER" | "COLLAPSE") => void;
   onStartRun: (seed: WorldSeed) => void;
-  onForgeMask: (input: string) => void;
+  onForgeMask: (wordId: string) => void;
   onAcceptClaim: (claim: Claim, approach: 'embrace' | 'resist') => void;
   onReset: () => void;
 };
@@ -30,6 +31,8 @@ export function ScreenRenderer(props: Props) {
       return (
         <MaskForgingView
           seedTitle={screen.seedTitle}
+          forge={screen.forge}
+          learnedWords={screen.learnedWords}
           onForge={onForgeMask}
         />
       );
@@ -73,9 +76,11 @@ export function ScreenRenderer(props: Props) {
             {screen.encounter.options.map(o => (
               <button key={o.id}
                 className="option-button"
-                onClick={() => onAction(o.id)}>
+                onClick={() => onAction(o.id)}
+                disabled={!canApply(screen.playerResources, o)}
+              >
                 <span className="option-label">{o.label}</span>
-                <OptionDetail costs={o.costs} effects={o.effects} grantsMarks={o.grantsMarks} />
+                <OptionDetail outcome={o} />
               </button>
             ))}
           </div>

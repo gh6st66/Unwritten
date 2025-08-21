@@ -9,7 +9,7 @@ export type FactionId = Id<"faction">;
 export type NpcId = Id<"npc">;
 
 export type Disposition = "ally" | "neutral" | "hostile";
-export type RoleTag = "merchant" | "captain" | "witch" | "thief" | "lord" | "artisan" | "guard" | "outsider";
+export type RoleTag = "merchant" | "captain" | "witch" | "thief" | "lord" | "artisan" | "guard" | "outsider" | "commoner";
 
 export interface Npc {
   id: NpcId;

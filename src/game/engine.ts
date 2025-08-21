@@ -3,10 +3,9 @@ import { reduce, INITIAL } from "./stateMachine";
 import { GameEvent, GameState } from "./types";
 import { EncounterGenerator } from "../systems/EncounterGenerator";
 import { MaskForger } from "../systems/MaskForger";
-import { WorldContext } from "../gen";
-import { FACTIONS_DATA } from "../data/factions";
-import { buildRegions } from "../services/worldGen";
-import { buildNPCs } from "../services/npcGen";
+import { generateWorld } from "../world/generateWorld";
+import { generateCivs } from "../civ/generateCivs";
+import { FORGES_DATA } from "../data/forges";
 
 const STORAGE_KEY = "unwritten:v1";
 
@@ -50,17 +49,16 @@ export function useEngine() {
             dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing seed for world generation." });
             return;
         }
-        const ctx: WorldContext = {
-            seed: state.runId,
-            epoch: "Inquisition", // Placeholder
-            gravity: "Order", // Placeholder
-            knownFactions: FACTIONS_DATA,
-        };
-        const regions = buildRegions(ctx, 3);
-        const ctxWithRegions: WorldContext = { ...ctx, knownRegions: regions.map(r => ({ id: r.id, name: r.name, biome: r.biome, climate: r.climate })) };
-        const npcs = buildNPCs(ctxWithRegions, 12);
         
-        dispatch({ type: "WORLD_GENERATED", world: { regions, npcs, factions: FACTIONS_DATA }});
+        try {
+            const world = generateWorld({ worldSeed: state.runId, historyYears: 50, variance: 0.1 });
+            const civs = generateCivs(world, 3);
+            dispatch({ type: "WORLD_GENERATED", world, civs });
+        } catch (e) {
+            console.error("World generation failed:", e);
+            const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+            dispatch({ type: "GENERATION_FAILED", error: `Could not generate world. ${errorMessage}` });
+        }
         return;
     }
 
@@ -70,12 +68,17 @@ export function useEngine() {
 
     if (context === 'MASK') {
         const forge = async () => {
-            if (!state.forgingInput || !state.activeSeed) {
-                dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing input for mask forging." });
+            if (!state.forgingInput || !state.activeSeed || !state.activeForgeId) {
+                dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing context for mask forging." });
+                return;
+            }
+            const forgeData = FORGES_DATA.find(f => f.id === state.activeForgeId);
+            if (!forgeData) {
+                dispatch({ type: "GENERATION_FAILED", error: "Internal error: Active forge data not found." });
                 return;
             }
             try {
-              const mask = await maskForger.forge(state.forgingInput, state.activeSeed);
+              const mask = await maskForger.forge(state.forgingInput, state.activeSeed, forgeData);
               dispatch({ type: "MASK_FORGED", mask });
             } catch (e) {
               console.error("Mask forging failed:", e);
@@ -104,7 +107,7 @@ export function useEngine() {
       
           generate();
     }
-  }, [state.phase, state.screen, state.runId, state.activeClaim, state.activeSeed, state.forgingInput, encounterGenerator, maskForger]);
+  }, [state.phase, state.screen, state.runId, state.activeClaim, state.activeSeed, state.forgingInput, state.activeForgeId, encounterGenerator, maskForger]);
 
   const send = useCallback((ev: GameEvent) => dispatch(ev), []);
 
