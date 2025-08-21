@@ -1,4 +1,5 @@
 {
   "name": "Unwritten",
-  "description": "A mobile-optimized card-based interactive story roguelike game."
+  "description": "A mobile-optimized interactive story rogue-lite game.",
+  "requestFramePermissions": []
 }

@@ -1,13 +1,16 @@
 import React from "react";
-import { GameScreen } from "../game/types";
+import { GameScreen, Claim } from "../game/types";
+import { OptionDetail } from "./OptionDetail";
 
 type Props = {
   screen: GameScreen;
   onAction: (id: string) => void;
   onAdvance: (to: "ENCOUNTER" | "COLLAPSE") => void;
+  onAcceptClaim: (claim: Claim, approach: 'embrace' | 'resist') => void;
+  onReset: () => void;
 };
 
-export function ScreenRenderer({ screen, onAction, onAdvance }: Props) {
+export function ScreenRenderer({ screen, onAction, onAdvance, onAcceptClaim, onReset }: Props) {
   switch (screen.kind) {
     case "INTRO":
       return (
@@ -21,13 +24,34 @@ export function ScreenRenderer({ screen, onAction, onAdvance }: Props) {
       );
     case "CLAIM":
       return (
-        <div className="p-4">
-          <h2 className="text-xl font-semibold">The Journal Writes</h2>
-          <p className="mt-2">{screen.claim.text}</p>
-          <button className="mt-4 px-4 py-2 rounded border"
-                  onClick={() => onAdvance("ENCOUNTER")}>
-            Accept
-          </button>
+        <div className="p-4 text-center">
+          <h2 className="text-sm font-semibold opacity-70">A FATE IS INSCRIBED</h2>
+          <p className="mt-4 text-xl">"{screen.claim.text}"</p>
+          <div className="mt-6 space-y-3">
+            <button className="option-button text-left"
+                    onClick={() => onAcceptClaim(screen.claim, 'embrace')}>
+              <div className="flex-grow">
+                <div>{screen.claim.embrace.label}</div>
+                <div className="text-xs opacity-70">{screen.claim.embrace.description}</div>
+              </div>
+            </button>
+            <button className="option-button text-left"
+                    onClick={() => onAcceptClaim(screen.claim, 'resist')}>
+              <div className="flex-grow">
+                <div>{screen.claim.resist.label}</div>
+                <div className="text-xs opacity-70">{screen.claim.resist.description}</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      );
+    case "LOADING":
+      return (
+        <div className="p-4 flex justify-center items-center h-48">
+          <div className="text-center space-y-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="opacity-70">{screen.message}</p>
+          </div>
         </div>
       );
     case "ENCOUNTER":
@@ -37,9 +61,10 @@ export function ScreenRenderer({ screen, onAction, onAdvance }: Props) {
           <div className="space-y-2">
             {screen.encounter.options.map(o => (
               <button key={o.id}
-                className="block w-full text-left px-4 py-2 rounded border"
+                className="option-button"
                 onClick={() => onAction(o.id)}>
-                {o.label}
+                <span className="option-label">{o.label}</span>
+                <OptionDetail costs={o.costs} effects={o.effects} grantsMarks={o.grantsMarks} />
               </button>
             ))}
           </div>
@@ -61,7 +86,7 @@ export function ScreenRenderer({ screen, onAction, onAdvance }: Props) {
           <h2 className="text-xl font-semibold">Collapse</h2>
           <p className="mt-2">{screen.reason}</p>
           <button className="mt-4 px-4 py-2 rounded border"
-                  onClick={() => location.reload()}>
+                  onClick={onReset}>
             Return to Title
           </button>
         </div>

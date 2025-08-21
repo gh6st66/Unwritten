@@ -1,30 +1,54 @@
 import { useCallback, useEffect, useMemo, useReducer } from "react";
-import { reduce } from "./stateMachine";
+import { reduce, INITIAL } from "./stateMachine";
 import { GameEvent, GameState } from "./types";
-
-const INITIAL: GameState = {
-  phase: "INTRO",
-  runId: "none",
-  player: {
-    id: "p1",
-    name: "The Unwritten",
-    resources: { TIME: 6, CLARITY: 3, CURRENCY: 0 },
-    marks: []
-  },
-  screen: { kind: "INTRO", seed: "hello" }
-};
+import { EncounterGenerator } from "../systems/EncounterGenerator";
 
 const STORAGE_KEY = "unwritten:v1";
 
 export function useEngine() {
   const [state, dispatch] = useReducer(reduce, undefined, () => {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as GameState) : INITIAL;
+    // Prevent loading a "stuck" state from a previous session
+    if (raw) {
+        const parsed = JSON.parse(raw) as GameState;
+        if (parsed.phase === "LOADING") {
+            return INITIAL;
+        }
+        return parsed;
+    }
+    return INITIAL;
   });
 
+  const encounterGenerator = useMemo(() => new EncounterGenerator(), []);
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Don't save LOADING state in case user closes tab
+    if (state.phase !== "LOADING") {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
   }, [state]);
+
+  useEffect(() => {
+    if (state.phase !== "LOADING") return;
+
+    const generate = async () => {
+      if (!state.activeClaim) {
+        dispatch({ type: "GENERATION_FAILED", error: "Internal error: No active claim found." });
+        return;
+      }
+      try {
+        const encounter = await encounterGenerator.generate(state);
+        dispatch({ type: "ENCOUNTER_LOADED", encounter });
+      } catch (e) {
+        console.error("Encounter generation failed:", e);
+        const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+        dispatch({ type: "GENERATION_FAILED", error: errorMessage });
+      }
+    };
+
+    generate();
+  }, [state.phase, state.activeClaim, state.player.marks, state.player.maskSeed, encounterGenerator, dispatch]);
+
 
   const send = useCallback((ev: GameEvent) => dispatch(ev), []);
   const api = useMemo(() => ({ state, send }), [state, send]);

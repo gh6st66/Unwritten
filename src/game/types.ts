@@ -1,6 +1,7 @@
 export type Phase =
   | "INTRO"
   | "CLAIM"
+  | "LOADING"
   | "ENCOUNTER"
   | "RESOLVE"
   | "COLLAPSE";
@@ -13,6 +14,14 @@ export type Claim = {
   id: string;
   text: string;           // e.g., "You betray allies."
   severity: 1 | 2 | 3;
+  embrace: {
+    label: string;
+    description: string;
+  };
+  resist: {
+    label: string;
+    description: string;
+  };
 };
 
 export type Mark = {
@@ -45,22 +54,29 @@ export type Encounter = {
 export type GameScreen =
   | { kind: "INTRO"; seed: string }
   | { kind: "CLAIM"; claim: Claim }
+  | { kind: "LOADING"; message: string }
   | { kind: "ENCOUNTER"; encounter: Encounter }
   | { kind: "RESOLVE"; summary: string }
   | { kind: "COLLAPSE"; reason: string };
 
 export type GameEvent =
   | { type: "START_RUN"; seed: string }
-  | { type: "ACCEPT_CLAIM"; claim: Claim }
+  | { type: "ACCEPT_CLAIM"; claim: Claim; approach: 'embrace' | 'resist' }
   | { type: "GENERATE_ENCOUNTER" }
+  | { type: "ENCOUNTER_LOADED"; encounter: Encounter }
+  | { type: "GENERATION_FAILED"; error: string }
   | { type: "CHOOSE_OPTION"; encounterId: string; optionId: string }
   | { type: "ADVANCE"; to: Phase }
   | { type: "END_RUN"; reason: string }
-  | { type: "LOAD_STATE"; snapshot: GameState };
+  | { type: "LOAD_STATE"; snapshot: GameState }
+  | { type: "RESET_GAME" };
 
 export type GameState = {
   phase: Phase;
   player: Player;
   screen: GameScreen;
   runId: string;
+  activeClaim: Claim | null;
+  day: number;
+  region: string;
 };

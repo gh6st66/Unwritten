@@ -1,4 +1,20 @@
-import { GameEvent, GameState, Encounter, Resources, Mark } from "./types";
+import { GameEvent, GameState, Resources, Mark, Claim } from "./types";
+
+export const INITIAL: GameState = {
+  phase: "INTRO",
+  runId: "none",
+  activeClaim: null,
+  day: 1,
+  region: "region_port",
+  player: {
+    id: "p1",
+    name: "The Unwritten",
+    resources: { TIME: 6, CLARITY: 3, CURRENCY: 0 },
+    marks: []
+  },
+  screen: { kind: "INTRO", seed: "hello" }
+};
+
 
 const clampRes = (r: Resources) => ({
   TIME: Math.max(0, r.TIME),
@@ -10,25 +26,49 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
   switch (ev.type) {
     case "START_RUN": {
       return {
-        ...state,
+        ...INITIAL,
         phase: "CLAIM",
         runId: crypto.randomUUID(),
         screen: { kind: "CLAIM", claim: seedClaim(ev.seed) }
       };
     }
     case "ACCEPT_CLAIM": {
+      const startingMark: Mark = ev.approach === 'embrace'
+        ? { id: 'fate-embraced', label: 'Fate-Embraced', value: 1 }
+        : { id: 'fate-defiant', label: 'Fate-Defiant', value: 1 };
+
       return {
         ...state,
-        phase: "ENCOUNTER",
-        screen: { kind: "ENCOUNTER", encounter: bootstrapEncounter(state) }
+        phase: "LOADING",
+        activeClaim: ev.claim,
+        player: {
+          ...state.player,
+          marks: mergeMarks(state.player.marks, [startingMark]),
+        },
+        screen: { kind: "LOADING", message: "The ink of fate dries..." }
       };
     }
     case "GENERATE_ENCOUNTER": {
       return {
         ...state,
-        phase: "ENCOUNTER",
-        screen: { kind: "ENCOUNTER", encounter: bootstrapEncounter(state) }
+        phase: "LOADING",
+        day: state.day + 1,
+        screen: { kind: "LOADING", message: "The path twists..." }
       };
+    }
+    case "ENCOUNTER_LOADED": {
+      return {
+        ...state,
+        phase: "ENCOUNTER",
+        screen: { kind: "ENCOUNTER", encounter: ev.encounter }
+      };
+    }
+    case "GENERATION_FAILED": {
+        return {
+            ...state,
+            phase: "COLLAPSE",
+            screen: { kind: "COLLAPSE", reason: `The world unravelled. (${ev.error})` }
+        };
     }
     case "CHOOSE_OPTION": {
       if (state.screen.kind !== "ENCOUNTER") return state;
@@ -58,13 +98,6 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       };
     }
     case "ADVANCE": {
-      if (ev.to === "ENCOUNTER") {
-        return {
-          ...state,
-          phase: "ENCOUNTER",
-          screen: { kind: "ENCOUNTER", encounter: bootstrapEncounter(state) }
-        };
-      }
       if (ev.to === "COLLAPSE") {
         return { ...state, phase: "COLLAPSE", screen: { kind: "COLLAPSE", reason: "Ended by design." } };
       }
@@ -76,43 +109,36 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     case "LOAD_STATE": {
       return ev.snapshot;
     }
+    case "RESET_GAME": {
+      localStorage.removeItem("unwritten:v1");
+      return INITIAL;
+    }
     default:
       return state;
   }
 }
 
-function seedClaim(seed: string) {
+function seedClaim(seed: string): Claim {
   // placeholder deterministic stub
-  const pool = [
-    { id: "betray", text: "You betray allies.", severity: 2 as const },
-    { id: "forsake", text: "You forsake vows.", severity: 1 as const },
-    { id: "ignite", text: "You ignite uprisings.", severity: 3 as const }
+  const pool: Claim[] = [
+    {
+      id: "betray", text: "You will betray an ally.", severity: 2 as const,
+      embrace: { label: "Embrace this path", description: "Accept the necessity of sacrifice." },
+      resist: { label: "Resist this fate", description: "Hold to loyalty, no matter the cost." },
+    },
+    {
+      id: "forsake", text: "You will forsake your vows.", severity: 1 as const,
+      embrace: { label: "Embrace this path", description: "Recognize that oaths can be cages." },
+      resist: { label: "Resist this fate", description: "An oath is the core of identity." },
+    },
+    {
+      id: "ignite", text: "You will ignite an uprising.", severity: 3 as const,
+      embrace: { label: "Embrace this path", description: "Become the spark that burns the old world down." },
+      resist: { label: "Resist this fate", description: "Seek order amidst the chaos." },
+    }
   ];
   const idx = Math.abs(hash(seed)) % pool.length;
   return pool[idx];
-}
-
-function bootstrapEncounter(state: GameState): Encounter {
-  return {
-    id: crypto.randomUUID(),
-    prompt: "The watch captain’s eyes flick to your hands. A murmur ripples along the wall. They know what you are.",
-    internalThoughtHint: "(Stay steady. Watch the exits.)",
-    options: [
-      {
-        id: "parley",
-        label: "Parley with the captain",
-        costs: { TIME: 1 },
-        effects: { CLARITY: 1 },
-        grantsMarks: [{ id: "diplomatic", label: "Diplomatic", value: +1 }]
-      },
-      {
-        id: "vanish",
-        label: "Melt into the crowd",
-        costs: { TIME: 1, CLARITY: 1 },
-        effects: { TIME: 1 } // regain time via evasion window
-      }
-    ]
-  };
 }
 
 function mergeMarks(current: Mark[], gains: Mark[]) {
