@@ -1,7 +1,8 @@
-// @ts-nocheck
-import { initialRun } from "../startup/initialRun";
+import { it, expect } from 'vitest';
+import { INITIAL } from '../game/stateMachine';
 
-it("boots run state", () => {
-  const s = initialRun();
-  expect(s.identity.mask.wearing).toBe(true);
+it("has a correct initial state", () => {
+  const s = INITIAL;
+  expect(s.phase).toBe('TITLE');
+  expect(s.player.mask).toBe(null);
 });

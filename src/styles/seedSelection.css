@@ -63,17 +63,3 @@
   color: var(--secondary-text-color);
   line-height: 1.6;
 }
-
-.glossary-button {
-    margin-top: 2rem;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
-    background-color: transparent;
-    color: var(--secondary-text-color);
-}
-.glossary-button:hover {
-    border-color: #555;
-    color: var(--primary-text-color);
-    background-color: rgba(255, 255, 255, 0.05);
-}

@@ -1,13 +1,15 @@
 import { GameEvent, GameState, Resources, Mark, Claim, WorldSeed } from "./types";
 import { worldSeeds } from "../data/worldSeeds";
 
+const STORAGE_KEY = "unwritten:v1";
+
 function selectRandomSeeds(count: number): WorldSeed[] {
   const shuffled = [...worldSeeds].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, count);
 }
 
 export const INITIAL: GameState = {
-  phase: "INTRO",
+  phase: "TITLE",
   runId: "none",
   activeClaim: null,
   activeSeed: null,
@@ -25,7 +27,7 @@ export const INITIAL: GameState = {
     marks: [],
     mask: null,
   },
-  screen: { kind: "INTRO", seeds: selectRandomSeeds(3) }
+  screen: { kind: "TITLE" }
 };
 
 
@@ -37,6 +39,13 @@ const clampRes = (r: Resources) => ({
 
 export function reduce(state: GameState, ev: GameEvent): GameState {
   switch (ev.type) {
+    case "REQUEST_NEW_RUN": {
+      return {
+        ...state,
+        phase: "SEED_SELECTION",
+        screen: { kind: "SEED_SELECTION", seeds: selectRandomSeeds(3) },
+      };
+    }
     case "START_RUN": {
       return {
         ...INITIAL,
@@ -154,12 +163,8 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       return ev.snapshot;
     }
     case "RESET_GAME": {
-      localStorage.removeItem("unwritten:v1");
-      return {
-        ...INITIAL,
-        // Reselect seeds on reset
-        screen: { kind: "INTRO", seeds: selectRandomSeeds(3) }
-      };
+      localStorage.removeItem(STORAGE_KEY);
+      return INITIAL;
     }
     default:
       return state;

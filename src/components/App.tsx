@@ -5,9 +5,10 @@ import { GameState, Claim, WorldSeed } from "../game/types";
 import { GlossaryView } from "./GlossaryView";
 import { glossaryData } from "../data/glossary";
 import { LoadingScreen } from "./LoadingScreen";
+import TitleScreen from "./TitleScreen";
 
 export default function App() {
-  const { state, send } = useEngine();
+  const { state, send, canContinue, loadGame } = useEngine();
   const [showGlossary, setShowGlossary] = useState(false);
 
   const onStartRun = (seed: WorldSeed) => {
@@ -41,6 +42,22 @@ export default function App() {
     send({ type: "RESET_GAME" });
   };
 
+  if (state.phase === "TITLE") {
+    return (
+      <>
+        <TitleScreen
+          onNewRun={() => send({ type: "REQUEST_NEW_RUN" })}
+          onContinue={loadGame}
+          canContinue={canContinue}
+          onOpenGlossary={() => setShowGlossary(true)}
+          onOpenSettings={() => alert("Settings are not yet implemented.")}
+          version="0.2.0"
+        />
+        {showGlossary && <GlossaryView categories={glossaryData} onClose={() => setShowGlossary(false)} />}
+      </>
+    );
+  }
+
   if (state.phase === "LOADING") {
     const message = state.screen.kind === 'LOADING' ? state.screen.message : 'The ink settles...';
     return <LoadingScreen message={message} />;
@@ -57,7 +74,6 @@ export default function App() {
         onForgeMask={onForgeMask}
         onAcceptClaim={onAcceptClaim}
         onReset={onReset}
-        onGlossaryOpen={() => setShowGlossary(true)}
       />
       <Footer onGlossaryOpen={() => setShowGlossary(true)} />
       {showGlossary && <GlossaryView categories={glossaryData} onClose={() => setShowGlossary(false)} />}

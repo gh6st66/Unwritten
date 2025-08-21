@@ -1,9 +1,26 @@
 import type { SpeakerContext } from "../../game/types";
 import type { LexemeEntry, LexemeKey, LexemeRule } from "./types";
-import enEntry from "../../data/lexicon/fateRecord.en.json";
+
+const enEntry: LexemeEntry = {
+  "key": "fateRecord",
+  "defaults": {
+    "en": { "term": "Record", "tags": ["neutral"] }
+  },
+  "rules": [
+    { "match": { "affiliationsAny": ["bureaucracy"] }, "variant": { "term": "Ledger", "tags": ["formal","bureaucratic"] }, "weight": 10 },
+    { "match": { "affiliationsAny": ["inquisition"] }, "variant": { "term": "Ledger of Transgressions", "tags": ["formal","punitive"] }, "weight": 20 },
+    { "match": { "affiliationsAny": ["clergy"] }, "variant": { "term": "Book of Deeds", "tags": ["mythic","religious"] }, "weight": 10 },
+    { "match": { "affiliationsAny": ["academy"] }, "variant": { "term": "Chronicle", "tags": ["scholarly","historic"] }, "weight": 10 },
+    { "match": { "affiliationsAny": ["guild"] }, "variant": { "term": "Register", "tags": ["trade","formal"] }, "weight": 5 },
+    { "match": { "affiliationsAny": ["military"] }, "variant": { "term": "Log", "tags": ["utilitarian"] }, "weight": 5 },
+    { "match": { "affiliationsAny": ["rural","commoner"] }, "variant": { "term": "Record Book", "tags": ["colloquial"] }, "weight": 3 },
+    { "match": { "regionAny": ["en-GB"] }, "variant": { "term": "Register", "tags": ["british","formal"] }, "weight": 1 },
+    { "match": { "localeStartsWith": ["en-GB"] }, "variant": { "term": "Register" }, "weight": 1 }
+  ]
+};
 
 const LEXEMES: Record<LexemeKey, LexemeEntry> = {
-  fateRecord: enEntry as unknown as LexemeEntry
+  fateRecord: enEntry
 };
 
 export function resolveLexeme(key: LexemeKey, ctx: SpeakerContext): string {

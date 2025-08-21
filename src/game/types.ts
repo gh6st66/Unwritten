@@ -1,7 +1,8 @@
 import { FactionDef, NPC, Region } from "../gen";
 
 export type Phase =
-  | "INTRO"
+  | "TITLE"
+  | "SEED_SELECTION"
   | "WORLD_GEN"
   | "FORGE_MASK"
   | "CLAIM"
@@ -75,7 +76,8 @@ export type WorldData = {
 };
 
 export type GameScreen =
-  | { kind: "INTRO"; seeds: WorldSeed[] }
+  | { kind: "TITLE" }
+  | { kind: "SEED_SELECTION"; seeds: WorldSeed[] }
   | { kind: "FORGE_MASK"; seedTitle: string }
   | { kind: "CLAIM"; claim: Claim }
   | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' }
@@ -84,6 +86,7 @@ export type GameScreen =
   | { kind: "COLLAPSE"; reason: string };
 
 export type GameEvent =
+  | { type: "REQUEST_NEW_RUN" }
   | { type: "START_RUN"; seed: WorldSeed }
   | { type: "WORLD_GENERATED"; world: WorldData }
   | { type: "FORGE_MASK"; input: string }

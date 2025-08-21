@@ -9,10 +9,9 @@ import '../styles/seedSelection.css';
 interface Props {
   seeds: WorldSeed[];
   onSelect: (seed: WorldSeed) => void;
-  onGlossaryOpen: () => void;
 }
 
-export const SeedSelectionView: React.FC<Props> = ({ seeds, onSelect, onGlossaryOpen }) => {
+export const SeedSelectionView: React.FC<Props> = ({ seeds, onSelect }) => {
   return (
     <div className="seed-selection-container">
       <h1 className="seed-selection-title">The Unwritten</h1>
@@ -25,9 +24,6 @@ export const SeedSelectionView: React.FC<Props> = ({ seeds, onSelect, onGlossary
           </button>
         ))}
       </div>
-       <button className="glossary-button" onClick={onGlossaryOpen}>
-        Glossary
-      </button>
     </div>
   );
 };

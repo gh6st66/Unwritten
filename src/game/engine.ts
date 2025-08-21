@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { reduce, INITIAL } from "./stateMachine";
 import { GameEvent, GameState } from "./types";
 import { EncounterGenerator } from "../systems/EncounterGenerator";
@@ -11,27 +11,36 @@ import { buildNPCs } from "../services/npcGen";
 const STORAGE_KEY = "unwritten:v1";
 
 export function useEngine() {
-  const [state, dispatch] = useReducer(reduce, undefined, () => {
+  const [state, dispatch] = useReducer(reduce, INITIAL);
+  const [canContinue, setCanContinue] = useState(false);
+
+  useEffect(() => {
+    // Check for a saved game on initial mount
     const raw = localStorage.getItem(STORAGE_KEY);
-    // Prevent loading a "stuck" state from a previous session
     if (raw) {
-        const parsed = JSON.parse(raw) as GameState;
-        if (["LOADING", "WORLD_GEN"].includes(parsed.phase)) {
-            // If we were loading, we lost the context, so just reset.
-            return INITIAL;
+        try {
+            const parsed = JSON.parse(raw) as GameState;
+            // A valid save is anything not in an initial or loading state
+            if (parsed.phase && parsed.phase !== 'TITLE' && !['LOADING', 'WORLD_GEN'].includes(parsed.phase)) {
+                setCanContinue(true);
+            }
+        } catch (e) {
+            console.error("Failed to parse saved game state:", e);
+            localStorage.removeItem(STORAGE_KEY);
         }
-        return parsed;
     }
-    return INITIAL;
-  });
+  }, []);
 
   const encounterGenerator = useMemo(() => new EncounterGenerator(), []);
   const maskForger = useMemo(() => new MaskForger(), []);
 
   useEffect(() => {
-    // Don't save LOADING/GEN state in case user closes tab
-    if (!["LOADING", "WORLD_GEN"].includes(state.phase)) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Only save state if we're not on the title screen
+    if (state.phase !== 'TITLE') {
+      // Don't save LOADING/GEN state in case user closes tab
+      if (!["LOADING", "WORLD_GEN"].includes(state.phase)) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
     }
   }, [state]);
 
@@ -97,8 +106,23 @@ export function useEngine() {
     }
   }, [state.phase, state.screen, state.runId, state.activeClaim, state.activeSeed, state.forgingInput, encounterGenerator, maskForger]);
 
-
   const send = useCallback((ev: GameEvent) => dispatch(ev), []);
-  const api = useMemo(() => ({ state, send }), [state, send]);
+
+  const loadGame = useCallback(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+        try {
+            const snapshot = JSON.parse(raw) as GameState;
+            send({ type: "LOAD_STATE", snapshot });
+            setCanContinue(false); // Can't continue again after loading
+        } catch(e) {
+            console.error("Failed to load game state:", e);
+            // If loading fails, reset to a clean state
+            send({ type: "RESET_GAME" });
+        }
+    }
+  }, [send]);
+
+  const api = useMemo(() => ({ state, send, canContinue, loadGame }), [state, send, canContinue, loadGame]);
   return api;
 }

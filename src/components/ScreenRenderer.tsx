@@ -13,19 +13,17 @@ type Props = {
   onForgeMask: (input: string) => void;
   onAcceptClaim: (claim: Claim, approach: 'embrace' | 'resist') => void;
   onReset: () => void;
-  onGlossaryOpen: () => void;
 };
 
 export function ScreenRenderer(props: Props) {
-  const { screen, onAction, onAdvance, onStartRun, onForgeMask, onAcceptClaim, onReset, onGlossaryOpen } = props;
+  const { screen, onAction, onAdvance, onStartRun, onForgeMask, onAcceptClaim, onReset } = props;
 
   switch (screen.kind) {
-    case "INTRO":
+    case "SEED_SELECTION":
       return (
         <SeedSelectionView 
           seeds={screen.seeds} 
           onSelect={onStartRun} 
-          onGlossaryOpen={onGlossaryOpen}
         />
       );
     case "FORGE_MASK":
@@ -104,9 +102,9 @@ export function ScreenRenderer(props: Props) {
           </button>
         </div>
       );
-    // The LOADING case is now handled by a full-screen component in App.tsx
-    // and will not be passed to ScreenRenderer.
+    // The LOADING/TITLE cases are handled by App.tsx and won't be passed here.
     case "LOADING":
+    case "TITLE":
         return null;
   }
 }
