@@ -14,8 +14,8 @@ export class EncounterEngine {
   private npcIndex: NpcIndex;
   private suggester: EncounterSuggester;
 
-  constructor(deps: EncounterEngineDeps) {
-    this.npcIndex = new NpcIndex(deps.npcs);
+  constructor(deps: EncounterEngineDeps, npcIndex?: NpcIndex) {
+    this.npcIndex = npcIndex || new NpcIndex(deps.npcs);
     const rulebook = new Rulebook(deps.rules);
     this.suggester = new EncounterSuggester(deps.schemas, this.npcIndex, rulebook);
   }
@@ -58,5 +58,5 @@ export function defaultRules(): RuleSpec[] {
 // Example quick-wire usage:
 export function demoSuggestion(run: RunState, schemas: EncounterSchema[], npcs: Npc[]) {
   const engine = new EncounterEngine({ schemas, rules: defaultRules(), npcs });
-  return engine.suggest(run, REGION_PORT);
+  return engine.suggest(run, REGION_PORT as any);
 }

@@ -1,18 +1,31 @@
-import { GameEvent, GameState, Resources, Mark, Claim } from "./types";
+import { GameEvent, GameState, Resources, Mark, Claim, WorldSeed } from "./types";
+import { worldSeeds } from "../data/worldSeeds";
+
+function selectRandomSeeds(count: number): WorldSeed[] {
+  const shuffled = [...worldSeeds].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, count);
+}
 
 export const INITIAL: GameState = {
   phase: "INTRO",
   runId: "none",
   activeClaim: null,
+  activeSeed: null,
+  forgingInput: null,
   day: 1,
-  region: "region_port",
+  world: {
+    regions: [],
+    factions: [],
+    npcs: [],
+  },
   player: {
     id: "p1",
     name: "The Unwritten",
     resources: { TIME: 6, CLARITY: 3, CURRENCY: 0 },
-    marks: []
+    marks: [],
+    mask: null,
   },
-  screen: { kind: "INTRO", seed: "hello" }
+  screen: { kind: "INTRO", seeds: selectRandomSeeds(3) }
 };
 
 
@@ -27,9 +40,40 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     case "START_RUN": {
       return {
         ...INITIAL,
-        phase: "CLAIM",
+        phase: "WORLD_GEN",
         runId: crypto.randomUUID(),
-        screen: { kind: "CLAIM", claim: seedClaim(ev.seed) }
+        activeSeed: ev.seed,
+        screen: { kind: "LOADING", message: "The world takes shape...", context: "WORLD_GEN" },
+      };
+    }
+    case "WORLD_GENERATED": {
+      if (!state.activeSeed) return state; // Should not happen
+      return {
+        ...state,
+        phase: "FORGE_MASK",
+        world: ev.world,
+        screen: { kind: "FORGE_MASK", seedTitle: state.activeSeed.title },
+      }
+    }
+    case "FORGE_MASK": {
+      return {
+        ...state,
+        phase: "LOADING",
+        forgingInput: ev.input,
+        screen: { kind: "LOADING", message: "The mask takes form in the ether...", context: "MASK" }
+      };
+    }
+    case "MASK_FORGED": {
+      return {
+        ...state,
+        phase: "CLAIM",
+        forgingInput: null,
+        player: {
+          ...state.player,
+          mask: ev.mask,
+          marks: mergeMarks(state.player.marks, ev.mask.grantedMarks),
+        },
+        screen: { kind: "CLAIM", claim: seedClaim(state.runId) }
       };
     }
     case "ACCEPT_CLAIM": {
@@ -45,7 +89,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
           ...state.player,
           marks: mergeMarks(state.player.marks, [startingMark]),
         },
-        screen: { kind: "LOADING", message: "The ink of fate dries..." }
+        screen: { kind: "LOADING", message: "The ink of fate dries...", context: "ENCOUNTER" }
       };
     }
     case "GENERATE_ENCOUNTER": {
@@ -53,7 +97,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
         ...state,
         phase: "LOADING",
         day: state.day + 1,
-        screen: { kind: "LOADING", message: "The path twists..." }
+        screen: { kind: "LOADING", message: "The path twists...", context: "ENCOUNTER" }
       };
     }
     case "ENCOUNTER_LOADED": {
@@ -111,7 +155,11 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     }
     case "RESET_GAME": {
       localStorage.removeItem("unwritten:v1");
-      return INITIAL;
+      return {
+        ...INITIAL,
+        // Reselect seeds on reset
+        screen: { kind: "INTRO", seeds: selectRandomSeeds(3) }
+      };
     }
     default:
       return state;

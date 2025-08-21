@@ -56,6 +56,28 @@
 }
 
 .glossary-list {
+  padding: 0;
+  margin: 0;
+}
+
+.glossary-category {
+  margin-bottom: 2.5rem;
+}
+
+.glossary-category:last-child {
+    margin-bottom: 0;
+}
+
+.glossary-category-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--accent-blue);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.glossary-entry-list {
   list-style: none;
   padding: 0;
   margin: 0;

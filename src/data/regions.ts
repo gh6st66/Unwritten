@@ -1,6 +1,6 @@
 import { RegionState } from "../systems/encounters/types";
 
-export const REGION_PORT: RegionState = {
+export const REGION_PORT: Omit<RegionState, 'factions' | 'tensionEdges'> & {factions: string[], tensionEdges: any[]} = {
   id: "region_port",
   name: "Harbor Quarter",
   factions: ["faction_guild", "faction_watch", "faction_smugglers"],

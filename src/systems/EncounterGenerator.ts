@@ -1,32 +1,66 @@
 import { GoogleGenAI } from "@google/genai";
-import { GameState, Encounter } from "../game/types";
+import { GameState, Encounter, SpeakerContext, Affiliation } from "../game/types";
 import { EncounterEngine, defaultRules } from "./encounters/EncounterEngine";
 import { ENCOUNTER_SCHEMAS } from "../data/encounterSchemas";
-import { NPCS_SAMPLE } from "../data/npcs.sample";
-import { REGION_PORT } from "../data/regions";
 import { NpcIndex } from "./encounters/NpcIndex";
 import { 
     RunState as EncounterRunState, 
     RegionState as EncounterRegionState, 
     StructuredEncounter, 
-    NpcId 
+    NpcId,
+    Npc,
+    RegionId,
+    FactionId,
+    RoleTag
 } from "./encounters/types";
+import { resolveLexeme } from "./lexicon/resolveLexeme";
+import { NPC as GenNPC } from "../gen";
 
 const MODEL = "gemini-2.5-flash";
 
+// Adapter to convert procedurally generated NPCs to the format the encounter engine expects.
+const factionToAffiliationMap: Record<string, Affiliation> = {
+    "faction_inquisition": "inquisition",
+    "faction_clergy": "clergy",
+    "faction_guild": "guild",
+    "faction_academy": "academy",
+    "faction_watch": "military",
+    "faction_smugglers": "outlaw",
+};
+
+const validRoleTags: Set<string> = new Set(["merchant", "captain", "witch", "thief", "lord", "artisan", "guard", "outsider"]);
+
+function convertGenNpcToEncounterNpc(genNpc: GenNPC): Npc {
+    const affiliations: Affiliation[] = [];
+    if (genNpc.factionId && factionToAffiliationMap[genNpc.factionId]) {
+        affiliations.push(factionToAffiliationMap[genNpc.factionId]);
+    }
+    if (!affiliations.includes("urban")) affiliations.push('urban');
+
+    const roleTags: RoleTag[] = [];
+    if (validRoleTags.has(genNpc.role)) {
+        roleTags.push(genNpc.role as RoleTag);
+    }
+
+    return {
+        id: genNpc.id as NpcId,
+        name: genNpc.name,
+        appearance: [], // This can be expanded later
+        region: genNpc.regionId as RegionId,
+        faction: genNpc.factionId as FactionId | undefined,
+        affiliations,
+        roleTags,
+        marks: genNpc.marks.map(m => m.id),
+        notoriety: 20 + Math.floor(Math.random() * 60), // 20-80
+        ties: [],
+    };
+}
+
 export class EncounterGenerator {
   private ai: GoogleGenAI;
-  private engine: EncounterEngine;
-  private npcIndex: NpcIndex;
 
   constructor() {
     this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-    this.npcIndex = new NpcIndex(NPCS_SAMPLE);
-    this.engine = new EncounterEngine({
-      schemas: ENCOUNTER_SCHEMAS,
-      rules: defaultRules(),
-      npcs: NPCS_SAMPLE,
-    });
   }
 
   public async generate(state: GameState): Promise<Encounter> {
@@ -34,20 +68,35 @@ export class EncounterGenerator {
       seed: state.runId,
       day: state.day,
       playerMarks: state.player.marks.map(m => m.id),
-      region: state.region as any,
+      region: state.world.regions[0].id as RegionId, // Use first generated region for now
       exposedFactions: [], // Placeholder
       notoriety: state.player.marks.reduce((acc, m) => acc + Math.abs(m.value), 0) * 5, // Simple notoriety calc
     };
-    const regionState: EncounterRegionState = REGION_PORT;
+    
+    // The region state should also be dynamic, for now we find the one we're in.
+    const regionState: EncounterRegionState | undefined = state.world.regions[0] as any; // TODO: Fix this type mismatch
+    if (!regionState) {
+        console.error("Player is in a region that doesn't exist in the world data.");
+        return this.getFallbackEncounter();
+    }
+    
+    const encounterNpcs = state.world.npcs.map(convertGenNpcToEncounterNpc);
+    // Create a dynamic engine with the current run's generated NPCs
+    const npcIndex = new NpcIndex(encounterNpcs);
+    const engine = new EncounterEngine({
+      schemas: ENCOUNTER_SCHEMAS,
+      rules: defaultRules(),
+      npcs: encounterNpcs,
+    }, npcIndex);
 
-    const structure = this.engine.suggest(runState, regionState);
+    const structure = engine.suggest(runState, regionState);
 
     if (!structure) {
         console.warn("No structured encounter could be generated, using fallback.");
         return this.getFallbackEncounter();
     }
 
-    const prompt = this.buildPrompt(structure);
+    const prompt = this.buildPrompt(structure, state, npcIndex);
 
     const res = await this.ai.models.generateContent({
         model: MODEL,
@@ -73,10 +122,26 @@ export class EncounterGenerator {
     }
   }
 
-  private buildPrompt(structure: StructuredEncounter): string {
+  private buildPrompt(structure: StructuredEncounter, state: GameState, npcIndex: NpcIndex): string {
+    const instigatorNpc = npcIndex.byId.get(structure.roles.instigator as NpcId);
+        
+    let speakerContext: SpeakerContext;
+    if (instigatorNpc) {
+        speakerContext = {
+            locale: 'en-US', // Assuming for now
+            region: 'en-US', // Assuming for now, can be mapped from instigatorNpc.region
+            affiliations: instigatorNpc.affiliations,
+            role: instigatorNpc.roleTags.join(', '),
+        };
+    } else {
+        // Fallback context
+        speakerContext = { locale: 'en-US', region: 'en-US', affiliations: ['commoner'], role: 'commoner' };
+    }
+    const fateRecordTerm = resolveLexeme('fateRecord', speakerContext);
+
     const roles = Object.fromEntries(
       Object.entries(structure.roles).map(([key, id]) => {
-        const npc = this.npcIndex.byId.get(id as NpcId);
+        const npc = npcIndex.byId.get(id as NpcId);
         if (npc) {
             return [key, {
                 appearance: npc.appearance,
@@ -89,9 +154,10 @@ export class EncounterGenerator {
     );
 
     const prompt = [
-      "System: You generate a single JSON encounter for a text roguelike based on a provided structure.",
+      `System: You generate a single JSON encounter for a text roguelike. The world's events are recorded in what this speaker calls "The ${fateRecordTerm}".`,
       "Rules:",
-      "- The `Roles` field provides character data as objects. When referring to them, combine their `appearance`, `roles`, and `marks` into a natural description (e.g., 'a stern-faced, armored guard captain known for being unyielding'). Do NOT use their real names.",
+      "- The player is known as 'The Unwritten' and wears a mask called '" + (state.player.mask?.name ?? 'The First Mask') + "'.",
+      "- Introduce characters by weaving their traits (`appearance`, `roles`, `marks`) into the scene's action and description. For example, instead of 'a wary merchant known for being upright,' write 'a merchant, dressed in fine silks, straightens their posture with an air of practiced honesty.' Show, don't just tell. Avoid repeating the same descriptive patterns. Do NOT use their real names.",
       "- Use the structure to inspire the encounter's narrative.",
       "- Keep the main `prompt` text brief and evocative (<= 60 words).",
       "- Create 3–4 options. Each `option` MUST have a unique `id`, a `label`, and can have `costs`, `effects`, and `grantsMarks`.",

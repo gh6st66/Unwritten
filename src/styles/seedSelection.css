@@ -1,0 +1,79 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+.seed-selection-container {
+  padding: 1rem;
+  text-align: center;
+  animation: fade-in-slow 0.8s ease-out;
+}
+
+@keyframes fade-in-slow {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.seed-selection-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--primary-text-color);
+}
+
+.seed-selection-subtitle {
+  margin-top: 0.5rem;
+  color: var(--secondary-text-color);
+  font-size: 0.9rem;
+}
+
+.seed-list {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.seed-card {
+  display: block;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+  color: var(--primary-text-color);
+}
+
+.seed-card:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: #555;
+  transform: translateY(-2px);
+}
+
+.seed-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.seed-card-description {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--secondary-text-color);
+  line-height: 1.6;
+}
+
+.glossary-button {
+    margin-top: 2rem;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background-color: transparent;
+    color: var(--secondary-text-color);
+}
+.glossary-button:hover {
+    border-color: #555;
+    color: var(--primary-text-color);
+    background-color: rgba(255, 255, 255, 0.05);
+}

@@ -1,0 +1,47 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+.ink-spinner {
+  width: 80px;
+  height: 80px;
+  animation: ink-spinner-rotate 12s linear infinite;
+  fill: var(--primary-text-color);
+  overflow: visible;
+}
+
+@keyframes ink-spinner-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ink-spinner-blot {
+  transform-origin: 50% 50%;
+}
+
+.ink-spinner-blot1 { animation: ink-spinner-crawl1 4s ease-in-out infinite alternate; }
+.ink-spinner-blot2 { animation: ink-spinner-crawl2 3.5s ease-in-out infinite alternate; }
+.ink-spinner-blot3 { animation: ink-spinner-crawl3 4.5s ease-in-out infinite alternate; }
+.ink-spinner-blot4 { animation: ink-spinner-crawl4 3s ease-in-out infinite alternate; }
+
+
+@keyframes ink-spinner-crawl1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-10px, 5px) scale(1.1); }
+}
+
+@keyframes ink-spinner-crawl2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(10px, -8px) scale(0.9); }
+}
+
+@keyframes ink-spinner-crawl3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(5px, 12px) scale(1.05); }
+}
+
+@keyframes ink-spinner-crawl4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-8px, -10px) scale(0.95); }
+}

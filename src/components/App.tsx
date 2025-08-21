@@ -1,19 +1,24 @@
 import React, { useState } from "react";
 import { useEngine } from "../game/engine";
 import { ScreenRenderer } from "./ScreenRenderer";
-import { GameState, Claim } from "../game/types";
+import { GameState, Claim, WorldSeed } from "../game/types";
 import { GlossaryView } from "./GlossaryView";
-import { glossary } from "../data/glossary";
+import { glossaryData } from "../data/glossary";
+import { LoadingScreen } from "./LoadingScreen";
 
 export default function App() {
   const { state, send } = useEngine();
   const [showGlossary, setShowGlossary] = useState(false);
 
+  const onStartRun = (seed: WorldSeed) => {
+    send({ type: 'START_RUN', seed });
+  };
+
+  const onForgeMask = (input: string) => {
+    send({ type: 'FORGE_MASK', input });
+  };
+
   const onAdvance = (to: "ENCOUNTER" | "COLLAPSE") => {
-    if (state.phase === "INTRO" && to === "ENCOUNTER") {
-      send({ type: "START_RUN", seed: crypto.randomUUID() });
-      return;
-    }
     if (state.phase === "RESOLVE" && to === "ENCOUNTER") {
       send({ type: "GENERATE_ENCOUNTER" });
       return;
@@ -36,6 +41,11 @@ export default function App() {
     send({ type: "RESET_GAME" });
   };
 
+  if (state.phase === "LOADING") {
+    const message = state.screen.kind === 'LOADING' ? state.screen.message : 'The ink settles...';
+    return <LoadingScreen message={message} />;
+  }
+
   return (
     <div className="app-container">
       <Header state={state} />
@@ -43,20 +53,24 @@ export default function App() {
         screen={state.screen}
         onAction={onAction}
         onAdvance={onAdvance}
+        onStartRun={onStartRun}
+        onForgeMask={onForgeMask}
         onAcceptClaim={onAcceptClaim}
         onReset={onReset}
+        onGlossaryOpen={() => setShowGlossary(true)}
       />
       <Footer onGlossaryOpen={() => setShowGlossary(true)} />
-      {showGlossary && <GlossaryView terms={glossary} onClose={() => setShowGlossary(false)} />}
+      {showGlossary && <GlossaryView categories={glossaryData} onClose={() => setShowGlossary(false)} />}
     </div>
   );
 }
 
 function Header({ state }: { state: GameState }) {
   const r = state.player.resources;
+  const maskName = state.player.mask?.name;
   return (
     <div className="p-3 flex items-center justify-between border-b">
-      <div className="font-semibold">Phase: {state.phase}</div>
+      <div className="font-semibold">{maskName ? `The ${maskName}` : `Phase: ${state.phase}`}</div>
       <div className="text-sm">
         TIME {r.TIME} · CLARITY {r.CLARITY} · COIN {r.CURRENCY}
       </div>

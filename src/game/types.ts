@@ -1,5 +1,9 @@
+import { FactionDef, NPC, Region } from "../gen";
+
 export type Phase =
   | "INTRO"
+  | "WORLD_GEN"
+  | "FORGE_MASK"
   | "CLAIM"
   | "LOADING"
   | "ENCOUNTER"
@@ -9,6 +13,12 @@ export type Phase =
 export type ResourceId = "TIME" | "CLARITY" | "CURRENCY";
 
 export type Resources = Record<ResourceId, number>;
+
+export type WorldSeed = {
+  id: string;
+  title: string;
+  description: string;
+};
 
 export type Claim = {
   id: string;
@@ -30,12 +40,19 @@ export type Mark = {
   value: number;          // -3..+3
 };
 
+export type Mask = {
+  name: string;
+  description: string;
+  imageUrl: string;
+  grantedMarks: Mark[];
+};
+
 export type Player = {
   id: string;
   name: string;
   resources: Resources;
   marks: Mark[];
-  maskSeed?: string;      // for Gemini prompts
+  mask: Mask | null;
 };
 
 export type Encounter = {
@@ -51,16 +68,26 @@ export type Encounter = {
   internalThoughtHint?: string; // short bracketed whisper
 };
 
+export type WorldData = {
+  regions: Region[];
+  factions: FactionDef[];
+  npcs: NPC[];
+};
+
 export type GameScreen =
-  | { kind: "INTRO"; seed: string }
+  | { kind: "INTRO"; seeds: WorldSeed[] }
+  | { kind: "FORGE_MASK"; seedTitle: string }
   | { kind: "CLAIM"; claim: Claim }
-  | { kind: "LOADING"; message: string }
+  | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' }
   | { kind: "ENCOUNTER"; encounter: Encounter }
   | { kind: "RESOLVE"; summary: string }
   | { kind: "COLLAPSE"; reason: string };
 
 export type GameEvent =
-  | { type: "START_RUN"; seed: string }
+  | { type: "START_RUN"; seed: WorldSeed }
+  | { type: "WORLD_GENERATED"; world: WorldData }
+  | { type: "FORGE_MASK"; input: string }
+  | { type: "MASK_FORGED"; mask: Mask }
   | { type: "ACCEPT_CLAIM"; claim: Claim; approach: 'embrace' | 'resist' }
   | { type: "GENERATE_ENCOUNTER" }
   | { type: "ENCOUNTER_LOADED"; encounter: Encounter }
@@ -74,9 +101,23 @@ export type GameEvent =
 export type GameState = {
   phase: Phase;
   player: Player;
+  world: WorldData;
   screen: GameScreen;
   runId: string;
   activeClaim: Claim | null;
+  activeSeed: WorldSeed | null;
+  forgingInput: string | null;
   day: number;
-  region: string;
 };
+
+// Lexicon System Types
+export type RegionCode = "en-US" | "en-GB" | "en-CA" | "en-AU" | "ga-IE" | "fr-FR" | "es-ES" | "es-419" | "custom";
+export type Affiliation =
+  | "inquisition" | "clergy" | "bureaucracy" | "academy" | "guild" | "military" | "rural" | "urban" | "commoner" | "outlaw";
+
+export interface SpeakerContext {
+  locale: string;           // e.g., "en-US"
+  region: RegionCode;       // coarse dialect selection
+  affiliations: Affiliation[]; // ordered by strength: strongest first
+  role?: string;            // freeform hint, e.g., "High Inquisitor", "Village Priest"
+}

@@ -1,3 +1,5 @@
+import { Affiliation } from "../../game/types";
+
 export type Seed = string;
 
 export type Id<T extends string> = `${T}_${string}`;
@@ -15,6 +17,7 @@ export interface Npc {
   appearance: string[]; // e.g., ["scarred", "well-dressed"]
   region: RegionId;
   faction?: FactionId;
+  affiliations: Affiliation[];
   roleTags: RoleTag[];
   marks: string[];        // reputation tags in your game
   notoriety: number;      // 0..100
