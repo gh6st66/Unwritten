@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { GameState, Encounter, SpeakerContext, Affiliation, ResourceId } from "../game/types";
 import { EncounterEngine, defaultRules } from "./encounters/EncounterEngine";
 import { ENCOUNTER_SCHEMAS } from "../data/encounterSchemas";
@@ -61,7 +61,6 @@ function convertCivNpcToEncounterNpc(civNpc: CivNPC): EncounterNpc {
 
 function convertWorldRegionToEncounterRegionState(world: World, worldRegion: WorldRegion, civs: GameState['world']['civs']): EncounterRegionState {
     // Find factions present in this region from all civs
-    const presentFactions: { id: FactionId, civId: string }[] = [];
     const regionNpcs = civs.flatMap(c => c.npcs).filter(n => n.regionId === worldRegion.id);
     const factionIdsInRegion = new Set(regionNpcs.map(n => n.factionId).filter(Boolean));
     
@@ -154,7 +153,51 @@ export class EncounterGenerator {
     const res = await this.ai.models.generateContent({
         model: MODEL,
         contents: prompt,
-        config: { responseMimeType: "application/json" }
+        config: { 
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    prompt: { type: Type.STRING },
+                    internalThoughtHint: { type: Type.STRING },
+                    options: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                id: { type: Type.STRING },
+                                label: { type: Type.STRING },
+                                effects: {
+                                    type: Type.ARRAY,
+                                    items: {
+                                        type: Type.OBJECT,
+                                        properties: {
+                                            resource: { type: Type.STRING },
+                                            delta: { type: Type.NUMBER }
+                                        },
+                                        propertyOrdering: ["resource", "delta"]
+                                    }
+                                },
+                                grantsMarks: {
+                                    type: Type.ARRAY,
+                                    items: {
+                                        type: Type.OBJECT,
+                                        properties: {
+                                            id: { type: Type.STRING },
+                                            label: { type: Type.STRING },
+                                            value: { type: Type.INTEGER }
+                                        },
+                                        propertyOrdering: ["id", "label", "value"]
+                                    }
+                                }
+                            },
+                            propertyOrdering: ["id", "label", "effects", "grantsMarks"]
+                        }
+                    }
+                },
+                propertyOrdering: ["prompt", "internalThoughtHint", "options"]
+            }
+        }
     });
     
     const text = res.text;
@@ -210,16 +253,13 @@ export class EncounterGenerator {
         `System: You generate a single JSON encounter for a text roguelike. The world's events are recorded in what this speaker calls "The ${fateRecordTerm}".`,
         `The current region is ${currentRegion?.name}, a ${currentRegion?.identity.dialectId} speaking area with a temperament that is ${currentRegion?.identity.temperament > 0 ? 'militant' : 'pacifist'} and ${currentRegion?.identity.law > 0 ? 'lawful' : 'lawless'}. The biome is ${currentRegion?.cells.length > 0 ? state.world.world?.grid[currentRegion.cells[0]].biome : 'unknown'}.`,
         "Rules:",
-        "- The player is known as 'The Unwritten' and wears a mask called '" + (state.player.mask?.name ?? 'The First Mask') + "'.",
-        "- Introduce characters by weaving their traits (`appearance`, `roles`, `marks`) into the scene's action and description. For example, instead of 'a wary merchant known for being upright,' write 'a merchant, dressed in fine silks, straightens their posture with an air of practiced honesty.' Show, don't just tell. Avoid repeating the same descriptive patterns. Do NOT use their real names.",
+        "- The player is 'The Unwritten' wearing a mask called '" + (state.player.mask?.name ?? 'The First Mask') + "'.",
+        "- Introduce characters by weaving their traits (`appearance`, `roles`, `marks`) into the scene's action and description. For example, instead of 'a wary merchant known for being upright,' write 'a merchant, dressed in fine silks, straightens their posture with an air of practiced honesty.' Do not use their real names.",
         "- Use the structure to inspire the encounter's narrative.",
         "- Keep the main `prompt` text brief and evocative (<= 60 words).",
-        "- Create 3–4 options. Each `option` MUST have a unique `id`, a `label`, and can have `effects` and `grantsMarks`.",
-        "- One option must represent inaction, waiting, or observing (e.g., 'Wait and see', 'Stay silent'). This passive option must always have a TIME cost. e.g. `effects: [{resource: \"TIME\", delta: -1}]`",
-        "- `effects` is an array of objects, each with `resource` (\"TIME\", \"CLARITY\", \"COIN\") and `delta` (a number, negative for cost, positive for gain).",
-        "- `grantsMarks` is an array of objects: {id, label, value: +1 or -1}.",
-        "- Add a very short `internalThoughtHint` (4-8 words) in parentheses. This should be a brief, personal thought or gut feeling, not a strategic analysis.",
-        "- Output ONLY the JSON object with keys: prompt, options[], internalThoughtHint.",
+        "- Create 3–4 thoughtful `options` for the player.",
+        "- One option must represent inaction or observation (e.g., 'Wait and see'). This option must have a TIME cost.",
+        "- Add a very short `internalThoughtHint` (4-8 words) as a brief, personal thought or gut feeling.",
         "## Encounter Structure",
         `Schema: ${structure.schemaId}`,
         `Topics: ${structure.topics.join(", ")}`,

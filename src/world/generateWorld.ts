@@ -4,12 +4,19 @@
 */
 import { World, WorldGenConfig, GeoCell, Region } from './types';
 import { makeRNG } from './rng';
-import dialects from '../data/dialects.json';
 import { DialectId } from '../systems/dialect/types';
 
 // NOTE: This is a simplified stub implementation of the design document.
 // A full implementation would involve complex algorithms for noise generation,
 // watershed analysis, and Voronoi partitioning.
+
+const DIALECTS_DATA = [
+  { "id": "northern-trade-pidgin", "name": "Northern Trade Pidgin" },
+  { "id": "old-high-imperial", "name": "Old High Imperial" },
+  { "id": "river-cant", "name": "River Cant" },
+  { "id": "salt-whispers", "name": "Salt-Whispers" },
+  { "id": "sun-bleached-creole", "name": "Sun-Bleached Creole" }
+];
 
 interface Dialect {
   id: DialectId;
@@ -55,7 +62,7 @@ export function generateWorld(cfg: WorldGenConfig): World {
         piety: rng.next(),
         wealth: rng.next(),
         law: rng.float(-1, 1),
-        dialectId: rng.pick(dialects as Dialect[]).id,
+        dialectId: rng.pick(DIALECTS_DATA as Dialect[]).id,
       }
     };
   }

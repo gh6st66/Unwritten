@@ -6,6 +6,7 @@ import { MaskForger } from "../systems/MaskForger";
 import { generateWorld } from "../world/generateWorld";
 import { generateCivs } from "../civ/generateCivs";
 import { FORGES_DATA } from "../data/forges";
+import { recordEvent } from "../systems/chronicle";
 
 const STORAGE_KEY = "unwritten:v1";
 
@@ -42,6 +43,39 @@ export function useEngine() {
       }
     }
   }, [state]);
+
+  // Chronicle event recording
+  useEffect(() => {
+    const events = JSON.parse(localStorage.getItem('unwritten:chronicle:events') || '[]');
+    
+    if (state.phase === "WORLD_GEN" && state.runId !== "none" && state.activeSeed) {
+        const runExists = events.some((e: any) => e.type === 'RUN_STARTED' && e.runId === state.runId);
+        if (!runExists) {
+            recordEvent({ type: "RUN_STARTED", runId: state.runId, seed: state.activeSeed.title });
+        }
+    } else if (state.phase === "COLLAPSE" && state.runId !== "none") {
+        const runEnded = events.some((e: any) => e.type === 'RUN_ENDED' && e.runId === state.runId);
+        if (!runEnded) {
+            const reason = state.screen.kind === 'COLLAPSE' ? state.screen.reason : 'Unknown';
+            recordEvent({ type: "RUN_ENDED", runId: state.runId, outcome: reason });
+        }
+    } else if (state.phase === 'CLAIM' && state.player.mask) {
+        const maskForged = events.some((e: any) => e.type === 'MASK_FORGED' && e.maskId === state.player.mask!.id);
+        if (!maskForged) {
+           recordEvent({
+               type: 'MASK_FORGED',
+               maskId: state.player.mask.id,
+               name: state.player.mask.name,
+               description: state.player.mask.description,
+               forgeId: state.activeForgeId!,
+               learnedWordId: state.lastForgedWordId!,
+               runId: state.runId,
+               ownerId: state.player.id,
+           });
+        }
+    }
+  }, [state.phase, state.runId, state.activeSeed, state.screen, state.player, state.activeForgeId, state.lastForgedWordId]);
+
 
   useEffect(() => {
     if (state.phase === "WORLD_GEN") {

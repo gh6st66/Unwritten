@@ -62,6 +62,7 @@ export type Mark = {
 export type MaskStyle = { strokes: number; symmetry: number; paletteKey: string; };
 
 export type Mask = {
+  id: string;
   name: string;
   description: string;
   imageUrl: string;
@@ -125,6 +126,7 @@ export type GameState = {
   activeSeed: WorldSeed | null;
   activeForgeId: string | null;
   forgingInput: string | null;
+  lastForgedWordId: string | null;
   day: number;
 };
 

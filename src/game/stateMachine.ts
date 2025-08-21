@@ -18,6 +18,7 @@ export const INITIAL: GameState = {
   activeSeed: null,
   activeForgeId: null,
   forgingInput: null,
+  lastForgedWordId: null,
   day: 1,
   world: {
     world: null,
@@ -69,7 +70,8 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       return {
         ...state,
         phase: "LOADING",
-        forgingInput: ev.wordId, // Using forgingInput to pass the wordId
+        forgingInput: ev.wordId,
+        lastForgedWordId: ev.wordId,
         screen: { kind: "LOADING", message: "The mask takes form in the ether...", context: "MASK" }
       };
     }

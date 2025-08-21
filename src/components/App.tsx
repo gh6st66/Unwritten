@@ -6,10 +6,12 @@ import { GlossaryView } from "./GlossaryView";
 import { glossaryData } from "../data/glossary";
 import { LoadingScreen } from "./LoadingScreen";
 import TitleScreen from "./TitleScreen";
+import { ChronicleHome } from "./chronicle/ChronicleHome";
 
 export default function App() {
   const { state, send, canContinue, loadGame } = useEngine();
   const [showGlossary, setShowGlossary] = useState(false);
+  const [showChronicle, setShowChronicle] = useState(false);
 
   const onStartRun = (seed: WorldSeed) => {
     send({ type: 'START_RUN', seed });
@@ -50,10 +52,12 @@ export default function App() {
           onContinue={loadGame}
           canContinue={canContinue}
           onOpenGlossary={() => setShowGlossary(true)}
+          onOpenChronicle={() => setShowChronicle(true)}
           onOpenSettings={() => alert("Settings are not yet implemented.")}
           version="0.2.0"
         />
         {showGlossary && <GlossaryView categories={glossaryData} onClose={() => setShowGlossary(false)} />}
+        {showChronicle && <ChronicleHome onClose={() => setShowChronicle(false)} />}
       </>
     );
   }

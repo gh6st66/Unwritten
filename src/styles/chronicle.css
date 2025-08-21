@@ -1,0 +1,137 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+.chronicle-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.chronicle-content {
+  background-color: var(--surface-color);
+  padding: 2rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  width: 100%;
+  max-width: 700px;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+
+.chronicle-close-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-size: 2rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: var(--secondary-text-color);
+  padding: 0.5rem;
+  cursor: pointer;
+}
+.chronicle-close-button:hover {
+  color: var(--primary-text-color);
+  background-color: transparent;
+}
+
+.chronicle-main-title {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--primary-text-color);
+}
+
+.chronicle-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.chronicle-section-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--accent-blue);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.chronicle-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.chronicle-item {
+    background-color: rgba(0,0,0,0.2);
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.chronicle-item h4 {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+.chronicle-item p {
+    font-size: 0.9rem;
+    color: var(--secondary-text-color);
+    margin-bottom: 0.25rem;
+}
+.chronicle-item .mask-description {
+    font-style: italic;
+    margin-bottom: 1rem;
+}
+.empty-section-message {
+  color: var(--secondary-text-color);
+  font-style: italic;
+}
+
+/* Provenance */
+.provenance-list {
+    margin-top: 1rem;
+}
+.provenance-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--secondary-text-color);
+    margin-bottom: 0.5rem;
+}
+.provenance-hop {
+    padding: 0.5rem;
+    border-left: 2px solid var(--border-color);
+    font-size: 0.85rem;
+}
+.provenance-details {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+.provenance-owner {
+    font-weight: 600;
+}
+.provenance-reason {
+    color: var(--secondary-text-color);
+}
+.provenance-ts {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    margin-top: 0.25rem;
+}

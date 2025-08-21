@@ -6,12 +6,19 @@ import { World } from '../world/types';
 import { Rng, makeRNG } from '../world/rng';
 import { Civilization, Faction, NPC, Disposition } from './types';
 import { DialectId } from '../systems/dialect/types';
-import dialects from '../data/dialects.json';
 
 const FIRST_NAMES = ["Anya", "Bram", "Cora", "Darian", "Elara", "Finn", "Gwen", "Hale"];
 const LAST_NAMES = ["Stonehand", "Swiftwater", "Blackwood", "Ironhide", "Silvermane"];
 const ROLES = ["merchant", "guard", "artisan", "scholar", "thief", "noble", "captain", "witch", "outsider"];
 const DISPOSITIONS: Disposition[] = ["friendly", "neutral", "hostile", "scheming"];
+
+const DIALECTS_DATA = [
+  { "id": "northern-trade-pidgin", "name": "Northern Trade Pidgin" },
+  { "id": "old-high-imperial", "name": "Old High Imperial" },
+  { "id": "river-cant", "name": "River Cant" },
+  { "id": "salt-whispers", "name": "Salt-Whispers" },
+  { "id": "sun-bleached-creole", "name": "Sun-Bleached Creole" }
+];
 
 interface Dialect {
     id: DialectId;
@@ -78,7 +85,7 @@ export function generateCivs(world: World, count: number): Civilization[] {
                 mysticism: rng.next(),
             },
             population: 1000 + rng.int(9000),
-            dialectId: world.regions[homeRegionId]?.identity.dialectId ?? rng.pick(dialects as Dialect[]).id,
+            dialectId: world.regions[homeRegionId]?.identity.dialectId ?? rng.pick(DIALECTS_DATA as Dialect[]).id,
             factions,
             npcs,
             ledger: [],

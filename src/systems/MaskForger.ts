@@ -21,12 +21,13 @@ export class MaskForger {
     const imageUrl = await this.generateMaskImage(textDetails.description, forge, wordId);
 
     return {
+      id: crypto.randomUUID(),
       ...textDetails,
       imageUrl,
     };
   }
 
-  private async generateTextDetails(wordId: string, seed: WorldSeed, forge: ForgeTemplate): Promise<Omit<Mask, 'imageUrl'>> {
+  private async generateTextDetails(wordId: string, seed: WorldSeed, forge: ForgeTemplate): Promise<Omit<Mask, 'imageUrl' | 'id'>> {
     const twist = forge.wordModifiers[wordId] ?? forge.defaultTwist;
 
     const prompt = [

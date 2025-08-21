@@ -4,6 +4,7 @@ type Props = {
   onNewRun: () => void;
   onContinue?: () => void;
   onOpenGlossary: () => void;
+  onOpenChronicle: () => void;
   onOpenSettings: () => void;
   canContinue?: boolean;
   version?: string;
@@ -14,6 +15,7 @@ const TitleScreen: React.FC<Props> = ({
   onNewRun,
   onContinue,
   onOpenGlossary,
+  onOpenChronicle,
   onOpenSettings,
   canContinue = false,
   version,
@@ -81,6 +83,11 @@ const TitleScreen: React.FC<Props> = ({
               data-focus-target="new-run"
             >
               New Run
+            </button>
+          </li>
+          <li role="none">
+            <button role="menuitem" className="TitleScreen_menuBtn" onClick={onOpenChronicle}>
+              Chronicle
             </button>
           </li>
           <li role="none">
