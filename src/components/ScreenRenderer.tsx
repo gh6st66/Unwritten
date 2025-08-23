@@ -1,21 +1,25 @@
-import React from "react";
-import { GameScreen, Claim, WorldSeed, SpeakerContext, Lexeme, Player } from "../game/types";
-import { OptionDetail } from "./OptionDetail";
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+import React, { useState } from "react";
+import { GameScreen, Claim, WorldSeed, SpeakerContext, Lexeme, Player, ActionOutcome } from "../game/types";
 import { SeedSelectionView } from "./SeedSelectionView";
 import { resolveLexeme } from "../systems/lexicon/resolveLexeme";
-import { canApply } from "../systems/resourceEngine";
 import { MaskRitual } from "../features/ritual/MaskRitual";
 import { FIRST_MASK_RITUAL_TEMPLATE } from '../data/rituals';
 import { LEXEMES_DATA } from '../data/lexemes';
 import { LexemeTier } from '../types/lexeme';
 import { MaskRevealView } from "./MaskRevealView";
 import GenerationTester from "./GenerationTester";
+import { ParserInput } from "./ParserInput";
+import '../styles/parser.css';
 
 type Props = {
   screen: GameScreen;
   player: Player;
-  onAction: (id: string) => void;
-  onAdvance: (to: "ENCOUNTER" | "COLLAPSE") => void;
+  onAttemptAction: (command: string) => void;
+  onAdvance: (to: "SCENE" | "COLLAPSE") => void;
   onStartRun: (seed: WorldSeed) => void;
   onCommitFirstMask: (lexeme: Lexeme) => void;
   onContinueAfterReveal: () => void;
@@ -28,7 +32,7 @@ export function ScreenRenderer(props: Props) {
   const { 
     screen, 
     player,
-    onAction, 
+    onAttemptAction,
     onAdvance, 
     onStartRun, 
     onAcceptClaim, 
@@ -37,6 +41,16 @@ export function ScreenRenderer(props: Props) {
     onContinueAfterReveal,
     onCloseTester,
   } = props;
+
+  const [isParsing, setIsParsing] = useState(false); // UI lock during action resolution
+
+  const handleParseSubmit = async (text: string) => {
+    setIsParsing(true);
+    onAttemptAction(text);
+    // In the new model, the state machine will handle the result and update the screen.
+    // We can probably remove the async nature and local parsing state here soon.
+    setIsParsing(false);
+  };
 
   switch (screen.kind) {
     case "GENERATION_TESTER":
@@ -49,8 +63,6 @@ export function ScreenRenderer(props: Props) {
         />
       );
     case "FIRST_MASK_FORGE": {
-      // Filter available lexemes based on player's unlocked set and tier rules.
-      // For now, only Basic tier is available for the first mask.
       const availableLexemes = LEXEMES_DATA.filter(lex => 
         player.unlockedLexemes.includes(lex.id) && lex.tier === LexemeTier.Basic
       );
@@ -101,22 +113,32 @@ export function ScreenRenderer(props: Props) {
         </div>
       );
     }
-    case "ENCOUNTER":
+    case "SCENE":
       return (
         <div className="p-4 space-y-3">
-          <p>{screen.encounter.prompt} <span className="opacity-70">{screen.encounter.internalThoughtHint}</span></p>
-          <div className="space-y-2">
-            {screen.encounter.options.map(o => (
-              <button key={o.id}
-                className="option-button"
-                onClick={() => onAction(o.id)}
-                disabled={!canApply(screen.playerResources, o)}
-              >
-                <span className="option-label">{o.label}</span>
-                <OptionDetail outcome={o} />
-              </button>
-            ))}
+          <p>{screen.prompt}</p>
+          
+          <ParserInput onSubmit={handleParseSubmit} disabled={isParsing} />
+
+          <div className="parser-response-area" aria-live="polite">
+            {screen.lastActionResponse}
           </div>
+
+          {screen.suggestedCommands && screen.suggestedCommands.length > 0 && (
+            <div className="suggestions-container">
+              <span className="suggestions-label">Suggestions:</span>
+              {screen.suggestedCommands.map((cmd, i) => (
+                <button
+                  key={`${cmd}-${i}`}
+                  className="suggestion-chip"
+                  onClick={() => handleParseSubmit(cmd)}
+                  disabled={isParsing}
+                >
+                  {cmd}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       );
     case "RESOLVE":
@@ -124,7 +146,7 @@ export function ScreenRenderer(props: Props) {
         <div className="p-4">
           <p>{screen.summary}</p>
           <button className="mt-4 px-4 py-2 rounded border"
-                  onClick={() => onAdvance("ENCOUNTER")}>
+                  onClick={() => onAdvance("SCENE")}>
             Continue
           </button>
         </div>

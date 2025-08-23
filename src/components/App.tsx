@@ -20,12 +20,12 @@ export default function App() {
   const onCommitFirstMask = (lexeme: Lexeme) => send({ type: 'COMMIT_FIRST_MASK', lexeme });
   const onContinueAfterReveal = () => send({ type: 'CONTINUE_AFTER_REVEAL' });
 
-  const onAdvance = (to: "ENCOUNTER" | "COLLAPSE") => {
-    if (state.phase === "RESOLVE" && to === "ENCOUNTER") {
-      send({ type: "GENERATE_ENCOUNTER" });
-      return;
+  const onAdvance = (to: "SCENE" | "COLLAPSE") => {
+    if (to === "COLLAPSE") {
+      send({ type: "END_RUN", reason: "Manual end." });
+    } else {
+      send({ type: "ADVANCE", to });
     }
-    if (to === "COLLAPSE") send({ type: "END_RUN", reason: "Manual end." });
   };
 
   const onAcceptClaim = (claim: Claim, approach: 'embrace' | 'resist') => {
@@ -34,9 +34,8 @@ export default function App() {
     }
   };
 
-  const onAction = (optionId: string) => {
-    if (state.screen.kind !== "ENCOUNTER") return;
-    send({ type: "CHOOSE_OPTION", encounterId: state.screen.encounter.id, optionId });
+  const onAttemptAction = (command: string) => {
+    send({ type: 'ATTEMPT_ACTION', rawCommand: command });
   };
   
   const onReset = () => {
@@ -73,8 +72,8 @@ export default function App() {
       <ScreenRenderer
         screen={state.screen}
         player={state.player}
-        onAction={onAction}
         onAdvance={onAdvance}
+        onAttemptAction={onAttemptAction}
         onStartRun={onStartRun}
         onCommitFirstMask={onCommitFirstMask}
         onContinueAfterReveal={onContinueAfterReveal}

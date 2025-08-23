@@ -1,10 +1,19 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
 import { GameEvent, GameState, Resources, Mark, Claim, WorldSeed, ResourceId, ActionOutcome, Lexeme } from "./types";
 import { worldSeeds } from "../data/worldSeeds";
 import { apply, canApply } from "../systems/resourceEngine";
 import { LEXEMES_DATA } from "../data/lexemes";
 import { LexemeTier } from "../types/lexeme";
+import { INTENTS, LEXICON, SCENES } from '../data/parser/content';
+import { ParserEngine } from '../systems/parser/engine';
 
 const STORAGE_KEY = "unwritten:v1";
+
+// Memoize the parser engine to avoid re-creating it on every action
+const parser = new ParserEngine(INTENTS, LEXICON);
 
 function selectRandomSeeds(count: number): WorldSeed[] {
   const shuffled = [...worldSeeds].sort(() => 0.5 - Math.random());
@@ -29,8 +38,10 @@ export const INITIAL: GameState = {
     marks: [],
     mask: null,
     unlockedLexemes: LEXEMES_DATA.filter(l => l.tier === LexemeTier.Basic).map(l => l.id),
+    flags: new Set(),
   },
-  screen: { kind: "TITLE" }
+  screen: { kind: "TITLE" },
+  currentSceneId: null,
 };
 
 
@@ -118,23 +129,120 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
           ...state.player,
           marks: mergeMarks(state.player.marks, [startingMark]),
         },
-        screen: { kind: "LOADING", message: "The ink of fate dries...", context: "ENCOUNTER" }
+        screen: { kind: "LOADING", message: "The ink of fate dries...", context: "SCENE" }
       };
     }
-    case "GENERATE_ENCOUNTER": {
+    case "LOAD_SCENE": {
+      const sceneData = SCENES[ev.sceneId];
+      if (!sceneData) {
+        console.error(`Scene not found: ${ev.sceneId}`);
+        return {
+          ...state,
+          phase: "COLLAPSE",
+          screen: { kind: "COLLAPSE", reason: `The world faded. (Scene ${ev.sceneId} not found)` }
+        };
+      }
       return {
         ...state,
-        phase: "LOADING",
-        day: state.day + 1,
-        screen: { kind: "LOADING", message: "The path twists...", context: "ENCOUNTER" }
+        phase: "SCENE",
+        currentSceneId: ev.sceneId,
+        screen: {
+          kind: "SCENE",
+          sceneId: ev.sceneId,
+          prompt: sceneData.description,
+          objects: sceneData.objects,
+          lastActionResponse: null,
+          suggestedCommands: [],
+        }
       };
     }
-    case "ENCOUNTER_LOADED": {
-      return {
-        ...state,
-        phase: "ENCOUNTER",
-        screen: { kind: "ENCOUNTER", encounter: ev.encounter, playerResources: state.player.resources }
-      };
+    case "ATTEMPT_ACTION": {
+      if (state.phase !== 'SCENE' || !state.currentSceneId) return state;
+      const scene = SCENES[state.currentSceneId];
+      if (!scene) return state; // Should not happen
+
+      const result = parser.resolve(ev.rawCommand, scene, state.player);
+      
+      if (!result.ok && state.screen.kind === 'SCENE') {
+        return {
+          ...state,
+          screen: {
+            ...state.screen,
+            lastActionResponse: result.message ?? "Nothing happens.",
+            suggestedCommands: result.suggested ?? [],
+          }
+        };
+      }
+      
+      if (result.ok && result.intent_id) {
+        const intent = INTENTS.find(i => i.id === result.intent_id);
+        if (!intent) return state; // Should not happen
+        
+        // This is where the 'execute.ts' logic lives now.
+        let summary = `You perform the action: ${intent.id}.`;
+        let newState = { ...state };
+        
+        for (const effect of intent.effects) {
+          switch (effect.type) {
+            case 'message': {
+                switch (intent.id) {
+                    case 'inspect': {
+                        const objectId = result.bindings?.object;
+                        if (objectId) {
+                            const sceneObject = scene.objects.find(o => o.id === objectId);
+                            summary = sceneObject?.inspect ?? `You see nothing special about the ${sceneObject?.name}.`;
+                        } else {
+                            summary = "You look around.";
+                        }
+                        break;
+                    }
+                    case 'take': {
+                        summary = "You take it.";
+                        break;
+                    }
+                    case 'open_close': {
+                        const obj = scene.objects.find(o => o.id === result.bindings?.object);
+                        if (obj?.state?.locked) {
+                            summary = "It's locked.";
+                        } else {
+                            summary = "You open it. It's empty inside.";
+                        }
+                        break;
+                    }
+                    default: {
+                         summary = effect.text ?? "Done.";
+                         break;
+                    }
+                }
+              break;
+            }
+            case 'move': {
+              const direction = result.bindings?.direction as string;
+              const nextSceneId = scene.exits[direction];
+              if (nextSceneId) {
+                summary = `You move ${direction}...`;
+                return {
+                  ...state,
+                  phase: 'LOADING',
+                  screen: { kind: 'LOADING', message: summary, context: 'SCENE' },
+                  currentSceneId: nextSceneId,
+                }
+              } else {
+                summary = `You can't go that way.`;
+              }
+              break;
+            }
+          }
+        }
+        
+        return {
+          ...newState,
+          phase: "RESOLVE",
+          screen: { kind: "RESOLVE", summary }
+        };
+      }
+      
+      return state;
     }
     case "GENERATION_FAILED": {
         return {
@@ -144,11 +252,11 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
         };
     }
     case "CHOOSE_OPTION": {
-      if (state.screen.kind !== "ENCOUNTER") return state;
-      const opt = state.screen.encounter.options.find(o => o.id === ev.optionId);
-      if (!opt || !canApply(state.player.resources, opt)) return state;
+      if (state.screen.kind !== "SCENE") return state;
+      const opt = {id: 'placeholder', label: 'placeholder', effects: []}; // This path is now for non-parser events.
+      if (!opt || !canApply(state.player.resources, opt as any)) return state;
 
-      const nextRes = apply(state.player.resources, opt);
+      const nextRes = apply(state.player.resources, opt as any);
 
       const collapse = nextRes.TIME <= 0 ? "Out of time." : null;
 
@@ -157,7 +265,6 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
         player: {
           ...state.player,
           resources: nextRes,
-          marks: opt.grantsMarks ? mergeMarks(state.player.marks, opt.grantsMarks) : state.player.marks
         },
         phase: collapse ? "COLLAPSE" : "RESOLVE",
         screen: collapse
@@ -169,12 +276,20 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       if (ev.to === "COLLAPSE") {
         return { ...state, phase: "COLLAPSE", screen: { kind: "COLLAPSE", reason: "Ended by design." } };
       }
+      // After resolving an action, return to the scene
+      if (state.phase === 'RESOLVE' && state.currentSceneId) {
+         return reduce(state, { type: 'LOAD_SCENE', sceneId: state.currentSceneId });
+      }
       return state;
     }
     case "END_RUN": {
       return { ...state, phase: "COLLAPSE", screen: { kind: "COLLAPSE", reason: ev.reason } };
     }
     case "LOAD_STATE": {
+      // Re-hydrate player.flags as a Set
+      if (ev.snapshot.player.flags && !(ev.snapshot.player.flags instanceof Set)) {
+        ev.snapshot.player.flags = new Set(ev.snapshot.player.flags as any);
+      }
       return ev.snapshot;
     }
     case "RESET_GAME": {

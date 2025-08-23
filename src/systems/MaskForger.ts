@@ -119,6 +119,7 @@ export class MaskForger {
 Rules:
 - Output JSON with keys: name (1-3 words), description (2-3 sentences), grantedMarks (array of 1-2 objects with id,label,value=1).
 - Tone: somber, mystical.
+- The mask's physical description (especially its material) must be plausible and tangible. Avoid nonsensical combinations like "calcified whispers" or "woven sound". Metaphors are acceptable, but must be grounded in a physical object.
 - No extra keys. No commentary.`;
 
     const portent = `A first mask forged under the sign of ${spec.word}, where ${spec.forge.toLowerCase()}.`;
@@ -143,9 +144,11 @@ Generate JSON now.`;
       `Material: ${spec.material}.`,
       `Motif: ${spec.motif}.`,
       `Condition: ${spec.condition}.`,
-      `Aura: ${spec.aura} (no glyphs or text).`,
+      `Aura: ${spec.aura}.`,
       `Presentation: ${spec.presentation}.`,
-      `Cinematic lighting, intricate detail, atmospheric. NO TEXT, NO LETTERS.`,
+      `Cinematic lighting, intricate detail, atmospheric.`,
+      `Rule: Any writing, such as runes or sigils, must appear as diegetic inscriptions carved into or painted onto the mask itself.`,
+      `Negative prompt: non-diegetic text, signatures, captions, floating letters, watermarks.`
     ].join(" ");
   }
 
@@ -184,6 +187,7 @@ Generate JSON now.`;
         "- The JSON MUST have `name` (string, 1-3 words), `description` (string, evocative, 2-3 sentences), `grantedMarks` (array of 1-2 objects with `id`, `label`, `value: 1`), and `themeOfFate` (an object mapping a domain to a number, e.g. `{\"Aggression\": 1}`).",
         "- The `name` should be creative and related to the chosen word.",
         "- The `description` should incorporate the word's domains, tags, and the portent's theme.",
+        "- The mask's physical description within the `description` must be plausible and tangible. Avoid nonsensical combinations like 'calcified whispers' or 'woven sound'. Metaphors are acceptable, but must be grounded in a physical object.",
         "- The `id` for marks should be a simple, machine-readable string (e.g., 'salt-ash-corrosion', 'tide-blade-fury').",
         "- The `value` for marks should be `1`.",
         "- The `themeOfFate` must be derived from the `maskThemeDelta` of the chosen word.",
@@ -245,7 +249,15 @@ Generate JSON now.`;
   }
 
   private async generateFirstMaskImage(description: string, lexeme: Lexeme): Promise<string> {
-    const prompt = `A cinematic portrait of a ceremonial mask forged in a dreamlike void. The mask is described as "${description}". It has a faint aura of "${lexeme.gloss.toLowerCase()}". Visual keywords: ${lexeme.tags.join(", ")}. Dark fantasy oil painting style. Rendered as an artifact of myth with dramatic lighting, floating embers, and deep shadows. NO TEXT, NO LETTERS, NO WRITING, text-free, symbol-free, no inscriptions.`;
+    const prompt = [
+        `A cinematic portrait of a ceremonial mask forged in a dreamlike void.`,
+        `The mask is described as "${description}".`,
+        `It has a faint aura of "${lexeme.gloss.toLowerCase()}".`,
+        `Visual keywords: ${lexeme.tags.join(", ")}.`,
+        `Dark fantasy oil painting style. Rendered as an artifact of myth with dramatic lighting, floating embers, and deep shadows.`,
+        `Rule: Any writing, such as runes or sigils, must appear as diegetic inscriptions carved into or painted onto the mask itself.`,
+        `Negative prompt: non-diegetic text, signatures, captions, floating letters, watermarks.`
+    ].join(" ");
 
     const res = await this.ai.models.generateImages({
         model: IMAGE_MODEL,

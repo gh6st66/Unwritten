@@ -117,23 +117,11 @@ export function useEngine() {
           forge();
     } 
     
-    if (context === 'ENCOUNTER') {
-        const generate = async () => {
-            if (!state.activeClaim) {
-              dispatch({ type: "GENERATION_FAILED", error: "Internal error: No active claim found." });
-              return;
-            }
-            try {
-              const encounter = await encounterGenerator.generate(state);
-              dispatch({ type: "ENCOUNTER_LOADED", encounter });
-            } catch (e) {
-              console.error("Encounter generation failed:", e);
-              const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-              dispatch({ type: "GENERATION_FAILED", error: errorMessage });
-            }
-          };
-      
-          generate();
+    if (context === 'SCENE') {
+      // After accepting a claim, load the first scene.
+      // After moving, load the next scene.
+      const sceneId = state.currentSceneId || 'mountain_forge';
+      dispatch({ type: "LOAD_SCENE", sceneId });
     }
   }, [state.phase, state.screen, state.runId, state.activeClaim, state.activeSeed, state.firstMaskLexeme, encounterGenerator, maskForger]);
 

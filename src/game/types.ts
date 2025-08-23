@@ -1,8 +1,13 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
 import { World } from "../world/types";
 import { Civilization } from "../civ/types";
 import { Lexeme } from "../types/lexeme";
+import { SceneObject, Effect as ParserEffect } from '../systems/parser/types';
 
-export type { Lexeme };
+export type { Lexeme, SceneObject, ParserEffect };
 
 export type Phase =
   | "TITLE"
@@ -12,7 +17,7 @@ export type Phase =
   | "MASK_REVEAL"
   | "CLAIM"
   | "LOADING"
-  | "ENCOUNTER"
+  | "SCENE"
   | "RESOLVE"
   | "COLLAPSE"
   | "GENERATION_TESTER";
@@ -66,7 +71,7 @@ export type Mark = {
 export type MaskStyle = { strokes: number; symmetry: number; paletteKey: string; };
 
 export type Mask = {
-  id: string;
+  id:string;
   name: string;
   description: string;
   imageUrl: string;
@@ -81,6 +86,7 @@ export type Player = {
   marks: Mark[];
   mask: Mask | null;
   unlockedLexemes: string[]; // Lexeme IDs
+  flags: Set<string>;
 };
 
 export type Encounter = {
@@ -101,8 +107,8 @@ export type GameScreen =
   | { kind: "FIRST_MASK_FORGE" }
   | { kind: "MASK_REVEAL"; mask: Mask }
   | { kind: "CLAIM"; claim: Claim }
-  | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' }
-  | { kind: "ENCOUNTER"; encounter: Encounter; playerResources: Resources }
+  | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' | 'SCENE' }
+  | { kind: "SCENE"; sceneId: string; prompt: string; objects: SceneObject[]; lastActionResponse: string | null; suggestedCommands: string[] }
   | { kind: "RESOLVE"; summary: string }
   | { kind: "COLLAPSE"; reason: string }
   | { kind: "GENERATION_TESTER" };
@@ -115,10 +121,10 @@ export type GameEvent =
   | { type: "MASK_FORGED"; mask: Mask }
   | { type: "CONTINUE_AFTER_REVEAL" }
   | { type: "ACCEPT_CLAIM"; claim: Claim; approach: 'embrace' | 'resist' }
-  | { type: "GENERATE_ENCOUNTER" }
-  | { type: "ENCOUNTER_LOADED"; encounter: Encounter }
+  | { type: "LOAD_SCENE", sceneId: string }
+  | { type: "ATTEMPT_ACTION", rawCommand: string }
   | { type: "GENERATION_FAILED"; error: string }
-  | { type: "CHOOSE_OPTION"; encounterId: string; optionId: string }
+  | { type: "CHOOSE_OPTION"; encounterId: string; optionId: string } // Kept for other event types
   | { type: "ADVANCE"; to: Phase }
   | { type: "END_RUN"; reason: string }
   | { type: "LOAD_STATE"; snapshot: GameState }
@@ -136,6 +142,7 @@ export type GameState = {
   activeSeed: WorldSeed | null;
   firstMaskLexeme: Lexeme | null;
   day: number;
+  currentSceneId: string | null;
 };
 
 // Lexicon System Types
