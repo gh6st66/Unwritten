@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { ChronicleEvent } from '../domain/events';
+import { ChronicleEvent, ChronicleEventPayload } from '../domain/events';
 import { ChronicleData, FigureState, MaskState, ProvenanceHop, RunState } from '../domain/states';
 
 const CHRONICLE_KEY = 'unwritten:chronicle:events';
@@ -17,11 +17,11 @@ function getEvents(): ChronicleEvent[] {
   }
 }
 
-export function recordEvent<E extends ChronicleEvent>(
-  event: Omit<E, 'ts'>
+export function recordEvent(
+  event: ChronicleEventPayload
 ) {
   const events = getEvents();
-  const fullEvent = { ...event, ts: Date.now() } as E;
+  const fullEvent: ChronicleEvent = { ...event, ts: Date.now() };
   events.push(fullEvent);
   localStorage.setItem(CHRONICLE_KEY, JSON.stringify(events));
 }

@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { reduce, INITIAL } from "./stateMachine";
-import { GameEvent, GameState } from "./types";
+import { GameEvent, GameState, Lexeme } from "./types";
 import { EncounterGenerator } from "../systems/EncounterGenerator";
 import { MaskForger } from "../systems/MaskForger";
 import { generateWorld } from "../world/generateWorld";
 import { generateCivs } from "../civ/generateCivs";
-import { FORGES_DATA } from "../data/forges";
 import { recordEvent } from "../systems/chronicle";
 
 const STORAGE_KEY = "unwritten:v1";
@@ -59,7 +58,7 @@ export function useEngine() {
             const reason = state.screen.kind === 'COLLAPSE' ? state.screen.reason : 'Unknown';
             recordEvent({ type: "RUN_ENDED", runId: state.runId, outcome: reason });
         }
-    } else if (state.phase === 'CLAIM' && state.player.mask) {
+    } else if (state.phase === 'CLAIM' && state.player.mask && state.firstMaskLexeme) {
         const maskForged = events.some((e: any) => e.type === 'MASK_FORGED' && e.maskId === state.player.mask!.id);
         if (!maskForged) {
            recordEvent({
@@ -67,14 +66,14 @@ export function useEngine() {
                maskId: state.player.mask.id,
                name: state.player.mask.name,
                description: state.player.mask.description,
-               forgeId: state.activeForgeId!,
-               learnedWordId: state.lastForgedWordId!,
+               forgeId: "dream-forge", // First forge is always the dream forge
+               learnedWordId: state.firstMaskLexeme.id,
                runId: state.runId,
                ownerId: state.player.id,
            });
         }
     }
-  }, [state.phase, state.runId, state.activeSeed, state.screen, state.player, state.activeForgeId, state.lastForgedWordId]);
+  }, [state.phase, state.runId, state.activeSeed, state.screen, state.player, state.firstMaskLexeme]);
 
 
   useEffect(() => {
@@ -102,17 +101,12 @@ export function useEngine() {
 
     if (context === 'MASK') {
         const forge = async () => {
-            if (!state.forgingInput || !state.activeSeed || !state.activeForgeId) {
+            if (!state.firstMaskLexeme || !state.activeSeed) {
                 dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing context for mask forging." });
                 return;
             }
-            const forgeData = FORGES_DATA.find(f => f.id === state.activeForgeId);
-            if (!forgeData) {
-                dispatch({ type: "GENERATION_FAILED", error: "Internal error: Active forge data not found." });
-                return;
-            }
             try {
-              const mask = await maskForger.forge(state.forgingInput, state.activeSeed, forgeData);
+              const mask = await maskForger.forgeFirstMask(state.firstMaskLexeme, state.activeSeed);
               dispatch({ type: "MASK_FORGED", mask });
             } catch (e) {
               console.error("Mask forging failed:", e);
@@ -141,7 +135,7 @@ export function useEngine() {
       
           generate();
     }
-  }, [state.phase, state.screen, state.runId, state.activeClaim, state.activeSeed, state.forgingInput, state.activeForgeId, encounterGenerator, maskForger]);
+  }, [state.phase, state.screen, state.runId, state.activeClaim, state.activeSeed, state.firstMaskLexeme, encounterGenerator, maskForger]);
 
   const send = useCallback((ev: GameEvent) => dispatch(ev), []);
 

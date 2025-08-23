@@ -1,25 +1,46 @@
 import React from "react";
-import { GameScreen, Claim, WorldSeed, SpeakerContext } from "../game/types";
+import { GameScreen, Claim, WorldSeed, SpeakerContext, Lexeme, Player } from "../game/types";
 import { OptionDetail } from "./OptionDetail";
 import { SeedSelectionView } from "./SeedSelectionView";
-import { MaskForgingView } from "./MaskForgingView";
 import { resolveLexeme } from "../systems/lexicon/resolveLexeme";
 import { canApply } from "../systems/resourceEngine";
+import { MaskRitual } from "../features/ritual/MaskRitual";
+import { FIRST_MASK_RITUAL_TEMPLATE } from '../data/rituals';
+import { LEXEMES_DATA } from '../data/lexemes';
+import { LexemeTier } from '../types/lexeme';
+import { MaskRevealView } from "./MaskRevealView";
+import GenerationTester from "./GenerationTester";
 
 type Props = {
   screen: GameScreen;
+  player: Player;
   onAction: (id: string) => void;
   onAdvance: (to: "ENCOUNTER" | "COLLAPSE") => void;
   onStartRun: (seed: WorldSeed) => void;
-  onForgeMask: (wordId: string) => void;
+  onCommitFirstMask: (lexeme: Lexeme) => void;
+  onContinueAfterReveal: () => void;
   onAcceptClaim: (claim: Claim, approach: 'embrace' | 'resist') => void;
   onReset: () => void;
+  onCloseTester: () => void;
 };
 
 export function ScreenRenderer(props: Props) {
-  const { screen, onAction, onAdvance, onStartRun, onForgeMask, onAcceptClaim, onReset } = props;
+  const { 
+    screen, 
+    player,
+    onAction, 
+    onAdvance, 
+    onStartRun, 
+    onAcceptClaim, 
+    onReset,
+    onCommitFirstMask,
+    onContinueAfterReveal,
+    onCloseTester,
+  } = props;
 
   switch (screen.kind) {
+    case "GENERATION_TESTER":
+      return <GenerationTester onClose={onCloseTester} />;
     case "SEED_SELECTION":
       return (
         <SeedSelectionView 
@@ -27,13 +48,25 @@ export function ScreenRenderer(props: Props) {
           onSelect={onStartRun} 
         />
       );
-    case "FORGE_MASK":
+    case "FIRST_MASK_FORGE": {
+      // Filter available lexemes based on player's unlocked set and tier rules.
+      // For now, only Basic tier is available for the first mask.
+      const availableLexemes = LEXEMES_DATA.filter(lex => 
+        player.unlockedLexemes.includes(lex.id) && lex.tier === LexemeTier.Basic
+      );
       return (
-        <MaskForgingView
-          seedTitle={screen.seedTitle}
-          forge={screen.forge}
-          learnedWords={screen.learnedWords}
-          onForge={onForgeMask}
+        <MaskRitual
+          template={FIRST_MASK_RITUAL_TEMPLATE}
+          lexemes={availableLexemes}
+          onCommit={onCommitFirstMask}
+        />
+      );
+    }
+    case "MASK_REVEAL":
+      return (
+        <MaskRevealView
+          mask={screen.mask}
+          onContinue={onContinueAfterReveal}
         />
       );
     case "CLAIM": {

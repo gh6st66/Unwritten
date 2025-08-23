@@ -1,8 +1,8 @@
-import { GameEvent, GameState, Resources, Mark, Claim, WorldSeed, ResourceId, ActionOutcome } from "./types";
+import { GameEvent, GameState, Resources, Mark, Claim, WorldSeed, ResourceId, ActionOutcome, Lexeme } from "./types";
 import { worldSeeds } from "../data/worldSeeds";
-import { FORGES_DATA } from "../data/forges";
-import { LEARNED_WORDS } from "../data/learnedWords";
 import { apply, canApply } from "../systems/resourceEngine";
+import { LEXEMES_DATA } from "../data/lexemes";
+import { LexemeTier } from "../types/lexeme";
 
 const STORAGE_KEY = "unwritten:v1";
 
@@ -16,9 +16,7 @@ export const INITIAL: GameState = {
   runId: "none",
   activeClaim: null,
   activeSeed: null,
-  activeForgeId: null,
-  forgingInput: null,
-  lastForgedWordId: null,
+  firstMaskLexeme: null,
   day: 1,
   world: {
     world: null,
@@ -30,7 +28,7 @@ export const INITIAL: GameState = {
     resources: { [ResourceId.TIME]: 6, [ResourceId.CLARITY]: 3, [ResourceId.CURRENCY]: 0 },
     marks: [],
     mask: null,
-    learnedWords: ["ASH", "ECHO", "BIND"], // Starter words
+    unlockedLexemes: LEXEMES_DATA.filter(l => l.tier === LexemeTier.Basic).map(l => l.id),
   },
   screen: { kind: "TITLE" }
 };
@@ -38,6 +36,15 @@ export const INITIAL: GameState = {
 
 export function reduce(state: GameState, ev: GameEvent): GameState {
   switch (ev.type) {
+    case "OPEN_TESTER": {
+      if (state.phase !== "TITLE") return state;
+      return { ...state, phase: "GENERATION_TESTER", screen: { kind: "GENERATION_TESTER" } };
+    }
+    case "CLOSE_TESTER": {
+      if (state.phase !== "GENERATION_TESTER") return state;
+      // Reset to INITIAL to ensure a clean slate when returning to title
+      return INITIAL;
+    }
     case "REQUEST_NEW_RUN": {
       return {
         ...state,
@@ -56,37 +63,47 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     }
     case "WORLD_GENERATED": {
       if (!state.activeSeed) return state; // Should not happen
-      const activeForge = FORGES_DATA[0]; // Select the first forge for now
-      const learnedWords = LEARNED_WORDS.filter(w => state.player.learnedWords.includes(w.id));
       return {
         ...state,
-        phase: "FORGE_MASK",
+        phase: "FIRST_MASK_FORGE",
         world: { world: ev.world, civs: ev.civs },
-        activeForgeId: activeForge.id,
-        screen: { kind: "FORGE_MASK", seedTitle: state.activeSeed.title, forge: activeForge, learnedWords },
+        screen: { kind: "FIRST_MASK_FORGE" },
       }
     }
-    case "FORGE_MASK": {
+    case "COMMIT_FIRST_MASK": {
+      if (state.phase !== 'FIRST_MASK_FORGE') return state;
       return {
         ...state,
         phase: "LOADING",
-        forgingInput: ev.wordId,
-        lastForgedWordId: ev.wordId,
+        firstMaskLexeme: ev.lexeme,
         screen: { kind: "LOADING", message: "The mask takes form in the ether...", context: "MASK" }
       };
     }
     case "MASK_FORGED": {
+      const lexeme = state.firstMaskLexeme;
+      let newMarks = state.player.marks;
+      if (lexeme?.effects.startingMarks) {
+        const startingMarks: Mark[] = lexeme.effects.startingMarks.map(id => ({ id, label: id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), value: 1 }));
+        newMarks = mergeMarks(newMarks, startingMarks);
+      }
       return {
         ...state,
-        phase: "CLAIM",
-        forgingInput: null,
+        phase: "MASK_REVEAL",
         player: {
           ...state.player,
           mask: ev.mask,
-          marks: mergeMarks(state.player.marks, ev.mask.grantedMarks),
+          marks: mergeMarks(newMarks, ev.mask.grantedMarks),
         },
-        screen: { kind: "CLAIM", claim: seedClaim(state.runId) }
+        screen: { kind: "MASK_REVEAL", mask: ev.mask }
       };
+    }
+    case "CONTINUE_AFTER_REVEAL": {
+        if (state.phase !== "MASK_REVEAL") return state;
+        return {
+            ...state,
+            phase: "CLAIM",
+            screen: { kind: "CLAIM", claim: seedClaim(state.runId) }
+        };
     }
     case "ACCEPT_CLAIM": {
       const startingMark: Mark = ev.approach === 'embrace'

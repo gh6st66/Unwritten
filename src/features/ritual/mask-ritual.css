@@ -1,0 +1,178 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+.mask-ritual {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  padding: 1rem;
+}
+.mask-viewport {
+  position: relative;
+  inline-size: 100%;
+  block-size: 320px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.2), transparent 70%);
+  border-radius: 8px;
+}
+
+.mask {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .12), rgba(0, 0, 0, .0) 60%);
+  transition: filter .6s ease;
+}
+.mask--awake {
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, .25));
+}
+
+.vapor {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: conic-gradient(from 90deg, transparent 0 70%, rgba(255, 255, 255, .12) 72% 100%);
+  animation: vapor-pulse 3s ease-in-out infinite;
+  transition: opacity 1s ease-in-out;
+}
+.vapor--active {
+  opacity: 1;
+}
+
+@keyframes vapor-pulse {
+  0%, 100% {
+    transform: translateY(2%) scale(1);
+    filter: blur(6px);
+  }
+  50% {
+    transform: translateY(-2%) scale(1.05);
+    filter: blur(8px);
+  }
+}
+
+.glyphs {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  mask-image: radial-gradient(circle at 50% 40%, black 0 56%, transparent 60%);
+  background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .18) 0 2px, transparent 2px 6px), repeating-linear-gradient(245deg, rgba(255, 255, 255, .12) 0 1px, transparent 1px 5px);
+}
+.glyphs--crawl {
+  opacity: 1;
+  animation: crawl 3.6s ease-in-out forwards;
+}
+
+@keyframes crawl {
+  0% {
+    background-position: 0 100%, 0 0;
+    filter: blur(4px);
+  }
+  50% {
+    background-position: 40% 60%, -20% 30%;
+    filter: blur(2px);
+  }
+  100% {
+    background-position: 80% 0%, -40% -30%;
+    filter: blur(1px);
+    opacity: 0.2;
+  }
+}
+
+.ritual-text-container {
+  min-height: 150px; /* prevent layout shifts */
+}
+
+.ritual-text {
+  display: grid;
+  gap: .5rem;
+  text-align: center;
+  animation: fade-in-slow 0.8s ease-out;
+}
+
+@keyframes fade-in-slow {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ritual-text p {
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--secondary-text-color);
+  max-width: 45ch;
+  margin: 0 auto;
+}
+
+.ritual-text button {
+  margin-top: 1rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background-color: transparent;
+  color: var(--primary-text-color);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  justify-self: center;
+}
+.ritual-text button:hover {
+  background-color: #2a2a2e;
+  border-color: #555;
+}
+
+
+.ritual-text--post p {
+  font-weight: 600;
+  color: var(--primary-text-color);
+}
+
+.chooser {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: .75rem;
+  animation: fade-in-slow 0.8s ease-out;
+}
+.lexeme {
+  padding: .75rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  display: grid;
+  gap: .25rem;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+.lexeme--basic {
+  background-color: rgba(255,255,255,0.03);
+  border-color: var(--border-color);
+}
+.lexeme--prime {
+  background: linear-gradient(45deg, rgba(214,193,163,0.05), rgba(214,193,163,0.15));
+  border-color: #d6c1a3;
+  box-shadow: 0 0 15px rgba(214,193,163,0.1);
+}
+.lexeme:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-blue);
+}
+
+.lexeme__gloss {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+.lexeme__tags {
+  opacity: .7;
+  font-size: .8rem;
+  text-transform: capitalize;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

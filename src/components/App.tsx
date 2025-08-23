@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useEngine } from "../game/engine";
 import { ScreenRenderer } from "./ScreenRenderer";
-import { GameState, Claim, WorldSeed, ResourceId } from "../game/types";
+import { GameState, Claim, WorldSeed, ResourceId, Lexeme } from "../game/types";
 import { GlossaryView } from "./GlossaryView";
 import { glossaryData } from "../data/glossary";
 import { LoadingScreen } from "./LoadingScreen";
@@ -17,9 +17,8 @@ export default function App() {
     send({ type: 'START_RUN', seed });
   };
 
-  const onForgeMask = (wordId: string) => {
-    send({ type: 'FORGE_MASK', wordId });
-  };
+  const onCommitFirstMask = (lexeme: Lexeme) => send({ type: 'COMMIT_FIRST_MASK', lexeme });
+  const onContinueAfterReveal = () => send({ type: 'CONTINUE_AFTER_REVEAL' });
 
   const onAdvance = (to: "ENCOUNTER" | "COLLAPSE") => {
     if (state.phase === "RESOLVE" && to === "ENCOUNTER") {
@@ -54,7 +53,8 @@ export default function App() {
           onOpenGlossary={() => setShowGlossary(true)}
           onOpenChronicle={() => setShowChronicle(true)}
           onOpenSettings={() => alert("Settings are not yet implemented.")}
-          version="0.2.0"
+          onOpenTester={() => send({ type: 'OPEN_TESTER' })}
+          version="0.2.1"
         />
         {showGlossary && <GlossaryView categories={glossaryData} onClose={() => setShowGlossary(false)} />}
         {showChronicle && <ChronicleHome onClose={() => setShowChronicle(false)} />}
@@ -72,12 +72,15 @@ export default function App() {
       <Header state={state} />
       <ScreenRenderer
         screen={state.screen}
+        player={state.player}
         onAction={onAction}
         onAdvance={onAdvance}
         onStartRun={onStartRun}
-        onForgeMask={onForgeMask}
+        onCommitFirstMask={onCommitFirstMask}
+        onContinueAfterReveal={onContinueAfterReveal}
         onAcceptClaim={onAcceptClaim}
         onReset={onReset}
+        onCloseTester={() => send({ type: 'CLOSE_TESTER' })}
       />
       <Footer onGlossaryOpen={() => setShowGlossary(true)} />
       {showGlossary && <GlossaryView categories={glossaryData} onClose={() => setShowGlossary(false)} />}
@@ -88,6 +91,16 @@ export default function App() {
 function Header({ state }: { state: GameState }) {
   const r = state.player.resources;
   const maskName = state.player.mask?.name;
+  
+  if (state.phase === 'GENERATION_TESTER') {
+    return (
+      <div className="p-3 flex items-center justify-between border-b">
+        <div className="font-semibold">Generation Tester</div>
+        <div className="text-sm">Developer Tools</div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-3 flex items-center justify-between border-b">
       <div className="font-semibold">{maskName ? `The ${maskName}` : `Phase: ${state.phase}`}</div>

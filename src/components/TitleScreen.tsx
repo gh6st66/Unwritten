@@ -6,6 +6,7 @@ type Props = {
   onOpenGlossary: () => void;
   onOpenChronicle: () => void;
   onOpenSettings: () => void;
+  onOpenTester: () => void;
   canContinue?: boolean;
   version?: string;
   className?: string;
@@ -17,6 +18,7 @@ const TitleScreen: React.FC<Props> = ({
   onOpenGlossary,
   onOpenChronicle,
   onOpenSettings,
+  onOpenTester,
   canContinue = false,
   version,
   className,
@@ -93,6 +95,11 @@ const TitleScreen: React.FC<Props> = ({
           <li role="none">
             <button role="menuitem" className="TitleScreen_menuBtn" onClick={onOpenGlossary}>
               Glossary
+            </button>
+          </li>
+          <li role="none">
+            <button role="menuitem" className="TitleScreen_menuBtn" onClick={onOpenTester}>
+              Generation Tester
             </button>
           </li>
           <li role="none">

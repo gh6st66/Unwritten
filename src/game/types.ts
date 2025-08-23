@@ -1,17 +1,21 @@
 import { World } from "../world/types";
 import { Civilization } from "../civ/types";
-import { ForgeTemplate, LearnedWord } from "../systems/maskforging/types";
+import { Lexeme } from "../types/lexeme";
+
+export type { Lexeme };
 
 export type Phase =
   | "TITLE"
   | "SEED_SELECTION"
   | "WORLD_GEN"
-  | "FORGE_MASK"
+  | "FIRST_MASK_FORGE"
+  | "MASK_REVEAL"
   | "CLAIM"
   | "LOADING"
   | "ENCOUNTER"
   | "RESOLVE"
-  | "COLLAPSE";
+  | "COLLAPSE"
+  | "GENERATION_TESTER";
 
 export enum ResourceId {
   TIME = "TIME",
@@ -67,6 +71,7 @@ export type Mask = {
   description: string;
   imageUrl: string;
   grantedMarks: Mark[];
+  themeOfFate: Record<string, number>;
 };
 
 export type Player = {
@@ -75,7 +80,7 @@ export type Player = {
   resources: Resources;
   marks: Mark[];
   mask: Mask | null;
-  learnedWords: string[];
+  unlockedLexemes: string[]; // Lexeme IDs
 };
 
 export type Encounter = {
@@ -93,19 +98,22 @@ export type WorldData = {
 export type GameScreen =
   | { kind: "TITLE" }
   | { kind: "SEED_SELECTION"; seeds: WorldSeed[] }
-  | { kind: "FORGE_MASK"; seedTitle: string; forge: ForgeTemplate; learnedWords: LearnedWord[] }
+  | { kind: "FIRST_MASK_FORGE" }
+  | { kind: "MASK_REVEAL"; mask: Mask }
   | { kind: "CLAIM"; claim: Claim }
   | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' }
   | { kind: "ENCOUNTER"; encounter: Encounter; playerResources: Resources }
   | { kind: "RESOLVE"; summary: string }
-  | { kind: "COLLAPSE"; reason: string };
+  | { kind: "COLLAPSE"; reason: string }
+  | { kind: "GENERATION_TESTER" };
 
 export type GameEvent =
   | { type: "REQUEST_NEW_RUN" }
   | { type: "START_RUN"; seed: WorldSeed }
   | { type: "WORLD_GENERATED"; world: World; civs: Civilization[] }
-  | { type: "FORGE_MASK"; wordId: string }
+  | { type: "COMMIT_FIRST_MASK"; lexeme: Lexeme }
   | { type: "MASK_FORGED"; mask: Mask }
+  | { type: "CONTINUE_AFTER_REVEAL" }
   | { type: "ACCEPT_CLAIM"; claim: Claim; approach: 'embrace' | 'resist' }
   | { type: "GENERATE_ENCOUNTER" }
   | { type: "ENCOUNTER_LOADED"; encounter: Encounter }
@@ -114,7 +122,9 @@ export type GameEvent =
   | { type: "ADVANCE"; to: Phase }
   | { type: "END_RUN"; reason: string }
   | { type: "LOAD_STATE"; snapshot: GameState }
-  | { type: "RESET_GAME" };
+  | { type: "RESET_GAME" }
+  | { type: "OPEN_TESTER" }
+  | { type: "CLOSE_TESTER" };
 
 export type GameState = {
   phase: Phase;
@@ -124,9 +134,7 @@ export type GameState = {
   runId: string;
   activeClaim: Claim | null;
   activeSeed: WorldSeed | null;
-  activeForgeId: string | null;
-  forgingInput: string | null;
-  lastForgedWordId: string | null;
+  firstMaskLexeme: Lexeme | null;
   day: number;
 };
 
@@ -141,3 +149,32 @@ export interface SpeakerContext {
   affiliations: Affiliation[];
   role?: string;
 }
+
+// Generation Tester Types
+export type MaskSpec = {
+  material: string;
+  forge: string;
+  intent: "Aggression" | "Wisdom" | "Cunning";
+  word: string;
+  condition: string;
+  motif: string;
+  aura: string;
+  presentation: string;
+};
+
+export type ThemeOfFate = {
+  id: string;
+  label: string;
+};
+
+export type TesterMask = {
+  name: string;
+  description: string;
+  grantedMarks: Mark[];
+  themeOfFate?: ThemeOfFate;
+  imagePrompt: string;
+  textPrompt: string;
+  spec: MaskSpec;
+  imageUrl?: string;
+  error?: string;
+};
