@@ -14,7 +14,7 @@ interface Props {
 export const SeedSelectionView: React.FC<Props> = ({ seeds, onSelect }) => {
   return (
     <div className="seed-selection-container">
-      <h1 className="seed-selection-title">The Unwritten</h1>
+      <h1 className="seed-selection-title">Unwritten</h1>
       <p className="seed-selection-subtitle">Choose a portent to begin your story.</p>
       <div className="seed-list">
         {seeds.map(seed => (

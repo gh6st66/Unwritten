@@ -1,6 +1,6 @@
 Here’s a condensed design guide for coders. All theory is boiled down into direct, implementable rules and examples for The Unwritten.
 
-The Unwritten – Psychological Design Guidelines (Condensed)
+Unwritten – Psychological Design Guidelines (Condensed)
 1. Low Ball Technique
 
 Mechanic: Give appealing advantage early → later reveal hidden cost.

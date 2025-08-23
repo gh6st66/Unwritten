@@ -57,8 +57,7 @@ const TitleScreen: React.FC<Props> = ({
 
       <header className="TitleScreen_centerBlock">
         <div className="TitleScreen_markIcon" aria-hidden />
-        <h1 className="TitleScreen_title" aria-label="The Unwritten">
-          <span className="TitleScreen_titleLine">The</span>
+        <h1 className="TitleScreen_title" aria-label="Unwritten">
           <span className="TitleScreen_titleLineAccent">Unwritten</span>
         </h1>
       </header>

@@ -1,4 +1,4 @@
-# Project Roadmap: The Unwritten (Narrative Redesign)
+# Project Roadmap: Unwritten (Narrative Redesign)
 
 This document outlines the development plan to evolve the game based on the new narrative-first design proposal.
 
