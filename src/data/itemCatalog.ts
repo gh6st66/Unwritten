@@ -29,6 +29,13 @@ const rulesById = new Map<string, ItemRule>(
   ])
 );
 
+// Manually add new items since we can't modify the JSON file directly.
+rulesById.set('bone_flute', { id: 'bone_flute', name: 'bone flute', nouns: ['bone flute', 'flute'], tags: ['instrument'], stackable: false, maxStack: 1, keyItem: false });
+rulesById.set('mossy_idol', { id: 'mossy_idol', name: 'mossy idol', nouns: ['moss-covered idol', 'idol', 'statue'], tags: ['artifact'], stackable: false, maxStack: 1, keyItem: true });
+rulesById.set('scattered_coins', { id: 'scattered_coins', name: 'scattered coins', nouns: ['coins', 'scattered coins', 'coin'], tags: ['currency'], stackable: true, maxStack: 1, keyItem: false });
+rulesById.set('torn_banner', { id: 'torn_banner', name: 'torn banner', nouns: ['torn banner', 'banner', 'flag'], tags: ['cloth'], stackable: false, maxStack: 1, keyItem: false });
+
+
 export function getItemRule(itemId: string): ItemRule {
   const r = rulesById.get(itemId);
   if (!r) throw new Error(`Unknown item: ${itemId}`);

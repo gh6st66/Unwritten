@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { reduce, INITIAL } from "./stateMachine";
-import { GameEvent, GameState, Lexeme, WorldSeed } from "./types";
+import { GameEvent, GameState, Lexeme, Origin } from "./types";
 import { EncounterGenerator } from "../systems/EncounterGenerator";
 import { MaskForger } from "../systems/MaskForger";
 import { generateWorld } from "../world/generateWorld";
 import { generateCivs } from "../civ/generateCivs";
 import { recordEvent } from "../systems/chronicle";
-import { OmenGenerator } from "../systems/OmenGenerator";
+import { OriginGenerator } from "../systems/OriginGenerator";
 
 const STORAGE_KEY = "unwritten:v1";
 
@@ -33,7 +33,7 @@ export function useEngine() {
 
   const encounterGenerator = useMemo(() => new EncounterGenerator(), []);
   const maskForger = useMemo(() => new MaskForger(), []);
-  const omenGenerator = useMemo(() => new OmenGenerator(), []);
+  const originGenerator = useMemo(() => new OriginGenerator(), []);
 
   useEffect(() => {
     // Only save state if we're not on the title screen
@@ -55,10 +55,10 @@ export function useEngine() {
   useEffect(() => {
     const events = JSON.parse(localStorage.getItem('unwritten:chronicle:events') || '[]');
     
-    if (state.phase === "WORLD_GEN" && state.runId !== "none" && state.activeSeed) {
+    if (state.phase === "WORLD_GEN" && state.runId !== "none" && state.activeOrigin) {
         const runExists = events.some((e: any) => e.type === 'RUN_STARTED' && e.runId === state.runId);
         if (!runExists) {
-            recordEvent({ type: "RUN_STARTED", runId: state.runId, seed: state.activeSeed.title });
+            recordEvent({ type: "RUN_STARTED", runId: state.runId, seed: state.activeOrigin.title });
         }
     } else if (state.phase === "COLLAPSE" && state.runId !== "none") {
         const runEnded = events.some((e: any) => e.type === 'RUN_ENDED' && e.runId === state.runId);
@@ -66,7 +66,7 @@ export function useEngine() {
             const reason = state.screen.kind === 'COLLAPSE' ? state.screen.reason : 'Unknown';
             recordEvent({ type: "RUN_ENDED", runId: state.runId, outcome: reason });
         }
-    } else if (state.phase === 'CLAIM' && state.player.mask && state.firstMaskLexeme) {
+    } else if (state.phase === 'OMEN' && state.player.mask && state.firstMaskLexeme) {
         const maskForged = events.some((e: any) => e.type === 'MASK_FORGED' && e.maskId === state.player.mask!.id);
         if (!maskForged) {
            recordEvent({
@@ -81,22 +81,22 @@ export function useEngine() {
            });
         }
     }
-  }, [state.phase, state.runId, state.activeSeed, state.screen, state.player, state.firstMaskLexeme]);
+  }, [state.phase, state.runId, state.activeOrigin, state.screen, state.player, state.firstMaskLexeme]);
 
 
   useEffect(() => {
     if (state.phase === "LOADING" && state.screen.kind === 'LOADING') {
         const { context } = state.screen;
 
-        if (context === 'OMEN_GEN') {
+        if (context === 'ORIGIN_GEN') {
             const generate = async () => {
                 try {
-                    const omens = await omenGenerator.generateOmens(3);
-                    dispatch({ type: "OMENS_GENERATED", seeds: omens });
+                    const origins = await originGenerator.generateOrigins(3);
+                    dispatch({ type: "ORIGINS_GENERATED", origins: origins });
                 } catch (e) {
-                    console.error("Omen generation failed:", e);
+                    console.error("Origin generation failed:", e);
                     const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-                    dispatch({ type: "GENERATION_FAILED", error: `Could not discern the omens. ${errorMessage}` });
+                    dispatch({ type: "GENERATION_FAILED", error: `Could not read the threads of fate. ${errorMessage}` });
                 }
             };
             generate();
@@ -105,12 +105,12 @@ export function useEngine() {
 
         if (context === 'MASK') {
             const forge = async () => {
-                if (!state.firstMaskLexeme || !state.activeSeed) {
+                if (!state.firstMaskLexeme || !state.activeOrigin) {
                     dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing context for mask forging." });
                     return;
                 }
                 try {
-                  const mask = await maskForger.forgeFirstMask(state.firstMaskLexeme, state.activeSeed);
+                  const mask = await maskForger.forgeFirstMask(state.firstMaskLexeme, state.activeOrigin);
                   dispatch({ type: "MASK_FORGED", mask });
                 } catch (e) {
                   console.error("Mask forging failed:", e);
@@ -123,7 +123,7 @@ export function useEngine() {
         } 
         
         if (context === 'SCENE') {
-          // After accepting a claim, load the first scene.
+          // After accepting an omen, load the first scene.
           // After moving, load the next scene.
           const sceneId = state.currentSceneId || 'mountain_forge';
           dispatch({ type: "LOAD_SCENE", sceneId });
@@ -132,8 +132,8 @@ export function useEngine() {
     }
 
     if (state.phase === "WORLD_GEN") {
-        if (!state.activeSeed) {
-            dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing seed for world generation." });
+        if (!state.activeOrigin) {
+            dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing origin for world generation." });
             return;
         }
         
@@ -149,7 +149,7 @@ export function useEngine() {
         return;
     }
 
-  }, [state.phase, state.screen, state.runId, state.activeClaim, state.activeSeed, state.firstMaskLexeme, encounterGenerator, maskForger, omenGenerator]);
+  }, [state.phase, state.screen, state.runId, state.activeOmen, state.activeOrigin, state.firstMaskLexeme, encounterGenerator, maskForger, originGenerator]);
 
   const send = useCallback((ev: GameEvent) => dispatch(ev), []);
 

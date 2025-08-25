@@ -14,7 +14,12 @@ export type ChronicleEventPayload =
   | { type: "FIGURE_UPDATE"; figureId: string; changes: { marks: any[] }; runId: string; }
   | { type: "ITEM_TAKEN"; runId: string; itemId: string; sceneId: string; }
   | { type: "ITEM_DROPPED"; runId: string; itemId: string; sceneId: string; }
-  | { type: "OBJECT_UNLOCKED"; runId: string; objectId: string; sceneId: string | null; toolId: string; };
+  | { type: "OBJECT_UNLOCKED"; runId: string; objectId: string; sceneId: string | null; toolId: string; }
+  | { type: "OBJECT_DESTROYED"; runId: string; objectId: string; objectName: string; sceneId: string; }
+  // New Echo Events
+  | { type: "BRIDGE_COLLAPSE"; runId: string; sceneId: string; }
+  | { type: "SPIRIT_HONORED"; runId: string; sceneId: string; }
+  | { type: "IDOL_STOLEN"; runId: string; sceneId: string; };
 
 // The full event type, with timestamp.
 // Using an intersection with a union distributes the intersection over the members of the union,

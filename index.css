@@ -446,3 +446,66 @@ button:disabled {
     animation: none;
   }
 }
+
+/* --- Hallucination Effect --- */
+.hallucinating {
+  animation: hallucinate-effect 8s ease-in-out infinite;
+}
+
+@keyframes hallucinate-effect {
+  0%, 100% {
+    filter: blur(0) saturate(1) hue-rotate(0deg);
+    transform: scale(1) skew(0);
+  }
+  20% {
+    filter: blur(0.5px) saturate(1.4) hue-rotate(15deg);
+    transform: scale(1.005) skew(-0.5deg);
+  }
+  40% {
+    filter: blur(0) saturate(1) hue-rotate(-5deg);
+  }
+  60% {
+    filter: blur(1px) saturate(0.8) hue-rotate(25deg);
+    transform: scale(0.995) skew(0.5deg);
+  }
+  80% {
+    filter: blur(0.2px) saturate(1.2) hue-rotate(0deg);
+  }
+}
+
+/* --- Scene Object List --- */
+.scene-objects-list {
+  margin-top: 1.5rem;
+}
+
+.scene-objects-list-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--secondary-text-color);
+  margin-bottom: 0.5rem;
+}
+
+.scene-objects-list-items {
+  list-style: none;
+  padding-left: 0;
+  color: var(--primary-text-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.scene-object-item {
+  display: inline;
+}
+
+.scene-object-item::first-letter {
+  text-transform: capitalize;
+}
+
+.scene-object-state {
+  color: var(--secondary-text-color);
+  font-size: 0.875rem;
+  margin-left: 0.25rem;
+}

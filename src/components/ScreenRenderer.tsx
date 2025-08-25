@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from "react";
-import { GameScreen, Claim, WorldSeed, SpeakerContext, Lexeme, Player, ActionOutcome } from "../game/types";
-import { SeedSelectionView } from "./SeedSelectionView";
-import { resolveLexeme } from "../systems/lexicon/resolveLexeme";
+import { GameScreen, Omen, Origin, Lexeme, Player, SceneObject } from "../game/types";
+import { OriginSelectionView } from "./OriginSelectionView";
 import { MaskRitual } from "../features/ritual/MaskRitual";
 import { FIRST_MASK_RITUAL_TEMPLATE } from '../data/rituals';
 import { LEXEMES_DATA } from '../data/lexemes';
@@ -14,28 +13,67 @@ import { MaskRevealView } from "./MaskRevealView";
 import GenerationTester from "./GenerationTester";
 import { ParserInput } from "./ParserInput";
 import '../styles/parser.css';
+import { OmenView } from "./OmenView";
+import { PlayerStatus } from "./PlayerStatus";
 
 type Props = {
   screen: GameScreen;
   player: Player;
+  activeOrigin: Origin | null;
   onAttemptAction: (command: string) => void;
   onAdvance: (to: "SCENE" | "COLLAPSE") => void;
-  onStartRun: (seed: WorldSeed) => void;
+  onStartRun: (origin: Origin) => void;
   onCommitFirstMask: (lexeme: Lexeme) => void;
   onContinueAfterReveal: () => void;
-  onAcceptClaim: (claim: Claim, approach: 'embrace' | 'resist') => void;
+  onAcceptOmen: (omen: Omen, approach: 'embrace' | 'resist') => void;
   onReset: () => void;
   onCloseTester: () => void;
 };
+
+/**
+ * Creates a descriptive string for a scene object based on its current state.
+ * e.g., "an old chest (locked, closed)"
+ */
+function formatObjectDescription(object: SceneObject): React.ReactNode {
+    const states = [];
+    if (object.state?.moved === true) states.push('moved');
+    if (object.state?.locked === true) states.push('locked');
+    if (object.state?.open === true) states.push('open');
+    else if (object.state?.open === false && (object.tags.includes('openable') || object.tags.includes('container'))) {
+      states.push('closed');
+    }
+
+    // Echo indicator
+    if (object.tags.includes('echo')) {
+        return (
+            <span className="scene-object-item">
+                {object.name}
+                <span className="scene-object-state" title="An echo from a past run">§</span>
+            </span>
+        );
+    }
+
+    if (states.length > 0) {
+        return (
+            <span className="scene-object-item">
+                {object.name}
+                <span className="scene-object-state">({states.join(', ')})</span>
+            </span>
+        );
+    }
+    return <span className="scene-object-item">{object.name}</span>;
+}
+
 
 export function ScreenRenderer(props: Props) {
   const { 
     screen, 
     player,
+    activeOrigin,
     onAttemptAction,
     onAdvance, 
     onStartRun, 
-    onAcceptClaim, 
+    onAcceptOmen, 
     onReset,
     onCommitFirstMask,
     onContinueAfterReveal,
@@ -52,20 +90,34 @@ export function ScreenRenderer(props: Props) {
     setIsParsing(false);
   };
 
+  const handleAcceptOmen = (approach: 'embrace' | 'resist') => {
+    if (screen.kind === 'OMEN') {
+      onAcceptOmen(screen.omen, approach);
+    }
+  };
+
   switch (screen.kind) {
     case "GENERATION_TESTER":
       return <GenerationTester onClose={onCloseTester} />;
-    case "SEED_SELECTION":
+    case "ORIGIN_SELECTION":
       return (
-        <SeedSelectionView 
-          seeds={screen.seeds} 
+        <OriginSelectionView 
+          origins={screen.origins} 
           onSelect={onStartRun} 
         />
       );
     case "FIRST_MASK_FORGE": {
-      const availableLexemes = LEXEMES_DATA.filter(lex => 
+      const allBasicLexemes = LEXEMES_DATA.filter(lex => 
         player.unlockedLexemes.includes(lex.id) && lex.tier === LexemeTier.Basic
       );
+
+      const biasedLexemes = activeOrigin?.lexemeBias
+        ? allBasicLexemes.filter(lex => activeOrigin.lexemeBias!.includes(lex.id))
+        : allBasicLexemes;
+      
+      // Fallback in case the bias results in an empty list (e.g., bad data)
+      const availableLexemes = biasedLexemes.length > 0 ? biasedLexemes : allBasicLexemes;
+
       return (
         <MaskRitual
           template={FIRST_MASK_RITUAL_TEMPLATE}
@@ -81,42 +133,38 @@ export function ScreenRenderer(props: Props) {
           onContinue={onContinueAfterReveal}
         />
       );
-    case "CLAIM": {
-      const journalContext: SpeakerContext = {
-        locale: 'en-US',
-        region: 'en-US',
-        affiliations: ['bureaucracy', 'clergy'], // Journal as a formal, mythic entity
-        role: 'Chronicler'
-      };
-      const journalTerm = resolveLexeme('fateRecord', journalContext);
-
+    case "OMEN": {
       return (
-        <div className="p-4 text-center">
-          <h2 className="text-sm font-semibold opacity-70">The {journalTerm} Writes:</h2>
-          <p className="mt-4 text-xl">"{screen.claim.text}"</p>
-          <div className="mt-6 space-y-3">
-            <button className="option-button text-left"
-                    onClick={() => onAcceptClaim(screen.claim, 'embrace')}>
-              <div className="flex-grow">
-                <div>{screen.claim.embrace.label}</div>
-                <div className="text-xs opacity-70">{screen.claim.embrace.description}</div>
-              </div>
-            </button>
-            <button className="option-button text-left"
-                    onClick={() => onAcceptClaim(screen.claim, 'resist')}>
-              <div className="flex-grow">
-                <div>{screen.claim.resist.label}</div>
-                <div className="text-xs opacity-70">{screen.claim.resist.description}</div>
-              </div>
-            </button>
-          </div>
-        </div>
+        <OmenView
+          omen={screen.omen}
+          onAccept={handleAcceptOmen}
+        />
       );
     }
-    case "SCENE":
+    case "SCENE": {
+      const sceneWrapperClasses = ["p-4", "space-y-3"];
+      if (screen.isHallucinating) {
+        sceneWrapperClasses.push("hallucinating");
+      }
       return (
-        <div className="p-4 space-y-3">
-          <p>{screen.prompt}</p>
+        <div className={sceneWrapperClasses.join(' ')}>
+          <p>{screen.description}</p>
+
+          {screen.objects.length > 0 && (
+            <div className="scene-objects-list">
+              <h3 className="scene-objects-list-title">You see:</h3>
+              <ul className="scene-objects-list-items">
+                {screen.objects.map((obj, i) => (
+                    <li key={obj.id}>
+                      {formatObjectDescription(obj)}
+                      {i < screen.objects.length - 1 ? ', ' : '.'}
+                    </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          <PlayerStatus player={player} />
           
           <ParserInput onSubmit={handleParseSubmit} disabled={isParsing} />
 
@@ -141,6 +189,7 @@ export function ScreenRenderer(props: Props) {
           )}
         </div>
       );
+    }
     case "RESOLVE":
       return (
         <div className="p-4">

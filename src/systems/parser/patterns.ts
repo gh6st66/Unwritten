@@ -7,6 +7,7 @@ import type { SlotName } from './types';
 export const PATTERNS: Array<{ re: RegExp; intent_hint: string; slots: SlotName[] }> = [
   // Patterns are ordered from most specific to most general.
   { re: /^use\s+(?<tool>.+?)\s+on\s+(?<object>.+)$/i, intent_hint: "use_on", slots: ["tool", "object"] },
+  { re: /^(?<verb>give|offer|hand over)\s+(?<tool>.+?)\s+to\s+(?<object>.+)$/i, intent_hint: "give", slots: ["tool", "object"] },
   { re: /^(?<verb>\w+)\s+(?<object>.+?)\s+with\s+(?<tool>.+)$/i, intent_hint: "generic", slots: ["object", "tool"] },
   
   // Specific verbs before generic

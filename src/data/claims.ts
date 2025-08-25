@@ -1,6 +1,6 @@
-import { Claim } from "../game/types";
+import { Omen } from "../game/types";
 
-export const CLAIMS_DATA: Claim[] = [
+export const OMENS_DATA: Omen[] = [
   {
     id: "betray",
     text: "You will betray an ally.",

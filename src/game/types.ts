@@ -18,11 +18,11 @@ export type SceneObject = ParserSceneObject & {
 
 export type Phase =
   | "TITLE"
-  | "SEED_SELECTION"
+  | "ORIGIN_SELECTION"
   | "WORLD_GEN"
   | "FIRST_MASK_FORGE"
   | "MASK_REVEAL"
-  | "CLAIM"
+  | "OMEN"
   | "LOADING"
   | "SCENE"
   | "RESOLVE"
@@ -49,17 +49,18 @@ export type ActionOutcome = {
   grantsMarks?: Mark[];
 };
 
-export type WorldSeed = {
+export type Origin = {
   id: string;
   title: string;
   description: string;
   tags?: string[];
   initialPlayerMarkId?: string;
   resourceModifier?: Partial<Resources>;
-  claimBias?: string[]; // Array of Claim IDs
+  omenBias?: string[]; // Array of Omen IDs
+  lexemeBias?: string[]; // Array of Lexeme IDs
 };
 
-export type Claim = {
+export type Omen = {
   id: string;
   text: string;
   severity: 1 | 2 | 3;
@@ -115,25 +116,25 @@ export type WorldData = {
 
 export type GameScreen =
   | { kind: "TITLE" }
-  | { kind: "SEED_SELECTION"; seeds: WorldSeed[] }
+  | { kind: "ORIGIN_SELECTION"; origins: Origin[] }
   | { kind: "FIRST_MASK_FORGE" }
   | { kind: "MASK_REVEAL"; mask: Mask }
-  | { kind: "CLAIM"; claim: Claim }
-  | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' | 'SCENE' | 'OMEN_GEN' }
-  | { kind: "SCENE"; sceneId: string; prompt: string; objects: SceneObject[]; lastActionResponse: string | null; suggestedCommands: string[] }
+  | { kind: "OMEN"; omen: Omen }
+  | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' | 'SCENE' | 'ORIGIN_GEN' }
+  | { kind: "SCENE"; sceneId: string; description: string; objects: SceneObject[]; lastActionResponse: string | null; suggestedCommands: string[]; isHallucinating?: boolean; }
   | { kind: "RESOLVE"; summary: string }
   | { kind: "COLLAPSE"; reason: string }
   | { kind: "GENERATION_TESTER" };
 
 export type GameEvent =
   | { type: "REQUEST_NEW_RUN" }
-  | { type: "OMENS_GENERATED"; seeds: WorldSeed[] }
-  | { type: "START_RUN"; seed: WorldSeed }
+  | { type: "ORIGINS_GENERATED"; origins: Origin[] }
+  | { type: "START_RUN"; origin: Origin }
   | { type: "WORLD_GENERATED"; world: World; civs: Civilization[] }
   | { type: "COMMIT_FIRST_MASK"; lexeme: Lexeme }
   | { type: "MASK_FORGED"; mask: Mask }
   | { type: "CONTINUE_AFTER_REVEAL" }
-  | { type: "ACCEPT_CLAIM"; claim: Claim; approach: 'embrace' | 'resist' }
+  | { type: "ACCEPT_OMEN"; omen: Omen; approach: 'embrace' | 'resist' }
   | { type: "LOAD_SCENE", sceneId: string }
   | { type: "ATTEMPT_ACTION", rawCommand: string }
   | { type: "GENERATION_FAILED"; error: string }
@@ -151,8 +152,8 @@ export type GameState = {
   world: WorldData;
   screen: GameScreen;
   runId: string;
-  activeClaim: Claim | null;
-  activeSeed: WorldSeed | null;
+  activeOmen: Omen | null;
+  activeOrigin: Origin | null;
   firstMaskLexeme: Lexeme | null;
   day: number;
   currentSceneId: string | null;

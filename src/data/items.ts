@@ -80,6 +80,15 @@ const catalog = {
       "stackable": false,
       "maxStack": 1,
       "keyItem": false
+    },
+    {
+      "id": "apple",
+      "name": "apple",
+      "nouns": ["apple", "red apple"],
+      "tags": ["food", "edible"],
+      "stackable": true,
+      "maxStack": 5,
+      "keyItem": false
     }
   ]
 };

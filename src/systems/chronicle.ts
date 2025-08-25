@@ -7,7 +7,7 @@ import { ChronicleData, FigureState, MaskState, ProvenanceHop, RunState } from '
 
 const CHRONICLE_KEY = 'unwritten:chronicle:events';
 
-function getEvents(): ChronicleEvent[] {
+export function getEvents(): ChronicleEvent[] {
   try {
     const raw = localStorage.getItem(CHRONICLE_KEY);
     if (!raw) return [];

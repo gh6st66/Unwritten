@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-.seed-selection-container {
+.origin-selection-container {
   padding: 1rem;
   text-align: center;
   animation: fade-in-slow 0.8s ease-out;
@@ -14,26 +14,26 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-.seed-selection-title {
+.origin-selection-title {
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--primary-text-color);
 }
 
-.seed-selection-subtitle {
+.origin-selection-subtitle {
   margin-top: 0.5rem;
   color: var(--secondary-text-color);
   font-size: 0.9rem;
 }
 
-.seed-list {
+.origin-list {
   margin-top: 2rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
-.seed-card {
+.origin-card {
   display: block;
   width: 100%;
   padding: 1rem 1.25rem;
@@ -46,18 +46,18 @@
   color: var(--primary-text-color);
 }
 
-.seed-card:hover {
+.origin-card:hover {
   background-color: rgba(255, 255, 255, 0.05);
   border-color: #555;
   transform: translateY(-2px);
 }
 
-.seed-card-title {
+.origin-card-title {
   font-size: 1.1rem;
   font-weight: 600;
 }
 
-.seed-card-description {
+.origin-card-description {
   margin-top: 0.5rem;
   font-size: 0.85rem;
   color: var(--secondary-text-color);

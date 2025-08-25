@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useEngine } from "../game/engine";
 import { ScreenRenderer } from "./ScreenRenderer";
-import { GameState, Claim, WorldSeed, ResourceId, Lexeme } from "../game/types";
+import { GameState, Omen, Origin, ResourceId, Lexeme } from "../game/types";
 import { GlossaryView } from "./GlossaryView";
 import { glossaryData } from "../data/glossary";
 import { LoadingScreen } from "./LoadingScreen";
@@ -13,8 +13,8 @@ export default function App() {
   const [showGlossary, setShowGlossary] = useState(false);
   const [showChronicle, setShowChronicle] = useState(false);
 
-  const onStartRun = (seed: WorldSeed) => {
-    send({ type: 'START_RUN', seed });
+  const onStartRun = (origin: Origin) => {
+    send({ type: 'START_RUN', origin });
   };
 
   const onCommitFirstMask = (lexeme: Lexeme) => send({ type: 'COMMIT_FIRST_MASK', lexeme });
@@ -28,9 +28,9 @@ export default function App() {
     }
   };
 
-  const onAcceptClaim = (claim: Claim, approach: 'embrace' | 'resist') => {
-    if (state.phase === "CLAIM") {
-      send({ type: "ACCEPT_CLAIM", claim, approach });
+  const onAcceptOmen = (omen: Omen, approach: 'embrace' | 'resist') => {
+    if (state.phase === "OMEN") {
+      send({ type: "ACCEPT_OMEN", omen, approach });
     }
   };
 
@@ -72,12 +72,13 @@ export default function App() {
       <ScreenRenderer
         screen={state.screen}
         player={state.player}
+        activeOrigin={state.activeOrigin}
         onAdvance={onAdvance}
         onAttemptAction={onAttemptAction}
         onStartRun={onStartRun}
         onCommitFirstMask={onCommitFirstMask}
         onContinueAfterReveal={onContinueAfterReveal}
-        onAcceptClaim={onAcceptClaim}
+        onAcceptOmen={onAcceptOmen}
         onReset={onReset}
         onCloseTester={() => send({ type: 'CLOSE_TESTER' })}
       />

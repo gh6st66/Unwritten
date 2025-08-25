@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import { GoogleGenAI, Type } from "@google/genai";
-import { Mask, WorldSeed, Lexeme, MaskSpec, Mark, ThemeOfFate, TesterMask } from "../game/types";
+import { Mask, Origin, Lexeme, MaskSpec, Mark, ThemeOfFate, TesterMask } from "../game/types";
 
 const TEXT_MODEL = "gemini-2.5-flash";
 const IMAGE_MODEL = "imagen-3.0-generate-002";
@@ -15,8 +15,8 @@ export class MaskForger {
     this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
   }
 
-  public async forgeFirstMask(lexeme: Lexeme, seed: WorldSeed): Promise<Mask> {
-    const textDetails = await this.generateFirstMaskText(lexeme, seed);
+  public async forgeFirstMask(lexeme: Lexeme, origin: Origin): Promise<Mask> {
+    const textDetails = await this.generateFirstMaskText(lexeme, origin);
     const imageUrl = await this.generateFirstMaskImage(textDetails.description, lexeme);
 
     return {
@@ -180,19 +180,19 @@ Generate JSON now.`;
     return `Forged at ${spec.forge}, this ${spec.material} mask bears ${spec.motif}. ${spec.condition} marks its making, while ${spec.aura} hints at the word of ${spec.word}.`;
   }
 
-  private async generateFirstMaskText(lexeme: Lexeme, seed: WorldSeed): Promise<Omit<Mask, 'id' | 'imageUrl'>> {
+  private async generateFirstMaskText(lexeme: Lexeme, origin: Origin): Promise<Omit<Mask, 'id' | 'imageUrl'>> {
     const prompt = [
         "System: You are a myth-maker for a dark fantasy roguelike. Generate a JSON object for a character's first mask based on a ritual.",
         "Rules:",
         "- The JSON MUST have `name` (string, 1-3 words), `description` (string, evocative, 2-3 sentences), `grantedMarks` (array of 1-2 objects with `id`, `label`, `value: 1`), and `themeOfFate` (an object mapping a domain to a number, e.g. `{\"Aggression\": 1}`).",
         "- The `name` should be creative and related to the chosen word.",
-        "- The `description` should incorporate the word's domains, tags, and the omen's theme.",
+        "- The `description` should incorporate the word's domains, tags, and the origin's theme.",
         "- The mask's physical description within the `description` must be plausible and tangible. Avoid nonsensical combinations like 'calcified whispers' or 'woven sound'. Metaphors are acceptable, but must be grounded in a physical object.",
         "- The `id` for marks should be a simple, machine-readable string (e.g., 'salt-ash-corrosion', 'tide-blade-fury').",
         "- The `value` for marks should be `1`.",
         "- The `themeOfFate` must be derived from the `maskThemeDelta` of the chosen word.",
         "- The tone is somber and mystical.",
-        `Omen: "${seed.description}"`,
+        `Origin: "${origin.description}"`,
         `Chosen Word (Lexeme): "${lexeme.gloss}" (ID: ${lexeme.id})`,
         `Domains: ${lexeme.domains.join(", ")}`,
         `Tags: ${lexeme.tags.join(", ")}`,
