@@ -54,7 +54,7 @@ Contains static game data.
 Contains core game logic, systems, and services, independent of the UI.
 
 *   **`EncounterGenerator.ts`**: The primary service for creating encounters. It uses the `encounters` engine to build a structural encounter and then uses the Gemini API to generate the narrative prose and player options.
-*   **`OriginGenerator.ts`**: The service for generating the starting conditions (`Origins`) for a new run using the Gemini API.
+*   **`OmenGenerator.ts`**: The service for generating the starting conditions (`Origins`) for a new run using the Gemini API.
 *   **`encounters/`**: This subdirectory contains the complete data-driven encounter generation system.
     *   **`types.ts`**: Defines all core types for the system (NPCs, Regions, Factions, Tensions, Schemas, Rules).
     *   **`seededRng.ts`**: A deterministic random number generator.

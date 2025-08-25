@@ -6,7 +6,7 @@ import { MaskForger } from "../systems/MaskForger";
 import { generateWorld } from "../world/generateWorld";
 import { generateCivs } from "../civ/generateCivs";
 import { recordEvent } from "../systems/chronicle";
-import { OriginGenerator } from "../systems/OriginGenerator";
+import { OmenGenerator } from "../systems/OmenGenerator";
 
 const STORAGE_KEY = "unwritten:v1";
 
@@ -33,7 +33,7 @@ export function useEngine() {
 
   const encounterGenerator = useMemo(() => new EncounterGenerator(), []);
   const maskForger = useMemo(() => new MaskForger(), []);
-  const originGenerator = useMemo(() => new OriginGenerator(), []);
+  const originGenerator = useMemo(() => new OmenGenerator(), []);
 
   useEffect(() => {
     // Only save state if we're not on the title screen

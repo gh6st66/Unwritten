@@ -15,7 +15,7 @@ const validResourceIds = Object.values(ResourceId);
 const validMarkIds = ["indebted", "oathbreaker", "visionary", "outcast"]; // A few examples for Gemini to use.
 const basicLexemeIds = LEXEMES_DATA.filter(l => l.tier === LexemeTier.Basic).map(l => l.id);
 
-export class OriginGenerator {
+export class OmenGenerator {
   private ai: GoogleGenAI;
 
   constructor() {
