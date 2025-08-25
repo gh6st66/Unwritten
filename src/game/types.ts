@@ -5,9 +5,16 @@
 import { World } from "../world/types";
 import { Civilization } from "../civ/types";
 import { Lexeme } from "../types/lexeme";
-import { SceneObject, Effect as ParserEffect } from '../systems/parser/types';
+import { SceneObject as ParserSceneObject, Effect as ParserEffect } from '../systems/parser/types';
+import { Inventory } from '../systems/inventory';
 
-export type { Lexeme, SceneObject, ParserEffect };
+export type { Lexeme, ParserEffect, Inventory };
+
+export type SceneObject = ParserSceneObject & {
+  takeable?: boolean;
+  itemId?: string;
+};
+
 
 export type Phase =
   | "TITLE"
@@ -46,6 +53,10 @@ export type WorldSeed = {
   id: string;
   title: string;
   description: string;
+  tags?: string[];
+  initialPlayerMarkId?: string;
+  resourceModifier?: Partial<Resources>;
+  claimBias?: string[]; // Array of Claim IDs
 };
 
 export type Claim = {
@@ -87,6 +98,7 @@ export type Player = {
   mask: Mask | null;
   unlockedLexemes: string[]; // Lexeme IDs
   flags: Set<string>;
+  inventory: Inventory;
 };
 
 export type Encounter = {
@@ -107,7 +119,7 @@ export type GameScreen =
   | { kind: "FIRST_MASK_FORGE" }
   | { kind: "MASK_REVEAL"; mask: Mask }
   | { kind: "CLAIM"; claim: Claim }
-  | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' | 'SCENE' }
+  | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' | 'SCENE' | 'OMEN_GEN' }
   | { kind: "SCENE"; sceneId: string; prompt: string; objects: SceneObject[]; lastActionResponse: string | null; suggestedCommands: string[] }
   | { kind: "RESOLVE"; summary: string }
   | { kind: "COLLAPSE"; reason: string }
@@ -115,6 +127,7 @@ export type GameScreen =
 
 export type GameEvent =
   | { type: "REQUEST_NEW_RUN" }
+  | { type: "OMENS_GENERATED"; seeds: WorldSeed[] }
   | { type: "START_RUN"; seed: WorldSeed }
   | { type: "WORLD_GENERATED"; world: World; civs: Civilization[] }
   | { type: "COMMIT_FIRST_MASK"; lexeme: Lexeme }

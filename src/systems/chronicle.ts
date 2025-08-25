@@ -10,9 +10,18 @@ const CHRONICLE_KEY = 'unwritten:chronicle:events';
 function getEvents(): ChronicleEvent[] {
   try {
     const raw = localStorage.getItem(CHRONICLE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    // Ensure the loaded data is an array to prevent iteration errors
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
-    console.error("Failed to load chronicle events:", e);
+    console.error("Failed to load or parse chronicle events:", e);
+    // If parsing fails, quarantine the bad data and return an empty array
+    const corruptedData = localStorage.getItem(CHRONICLE_KEY);
+    if (corruptedData) {
+      localStorage.setItem(`${CHRONICLE_KEY}:corrupted:${Date.now()}`, corruptedData);
+      localStorage.removeItem(CHRONICLE_KEY);
+    }
     return [];
   }
 }

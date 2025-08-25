@@ -15,7 +15,7 @@ export const SeedSelectionView: React.FC<Props> = ({ seeds, onSelect }) => {
   return (
     <div className="seed-selection-container">
       <h1 className="seed-selection-title">Unwritten</h1>
-      <p className="seed-selection-subtitle">Choose a portent to begin your story.</p>
+      <p className="seed-selection-subtitle">Choose an omen to begin your story.</p>
       <div className="seed-list">
         {seeds.map(seed => (
           <button key={seed.id} className="seed-card" onClick={() => onSelect(seed)}>

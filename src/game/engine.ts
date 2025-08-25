@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { reduce, INITIAL } from "./stateMachine";
-import { GameEvent, GameState, Lexeme } from "./types";
+import { GameEvent, GameState, Lexeme, WorldSeed } from "./types";
 import { EncounterGenerator } from "../systems/EncounterGenerator";
 import { MaskForger } from "../systems/MaskForger";
 import { generateWorld } from "../world/generateWorld";
 import { generateCivs } from "../civ/generateCivs";
 import { recordEvent } from "../systems/chronicle";
+import { OmenGenerator } from "../systems/OmenGenerator";
 
 const STORAGE_KEY = "unwritten:v1";
 
@@ -32,13 +33,20 @@ export function useEngine() {
 
   const encounterGenerator = useMemo(() => new EncounterGenerator(), []);
   const maskForger = useMemo(() => new MaskForger(), []);
+  const omenGenerator = useMemo(() => new OmenGenerator(), []);
 
   useEffect(() => {
     // Only save state if we're not on the title screen
     if (state.phase !== 'TITLE') {
       // Don't save LOADING/GEN state in case user closes tab
       if (!["LOADING", "WORLD_GEN"].includes(state.phase)) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        const replacer = (key: string, value: any) => {
+          if (value instanceof Set) {
+            return Array.from(value);
+          }
+          return value;
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state, replacer));
       }
     }
   }, [state]);
@@ -77,6 +85,52 @@ export function useEngine() {
 
 
   useEffect(() => {
+    if (state.phase === "LOADING" && state.screen.kind === 'LOADING') {
+        const { context } = state.screen;
+
+        if (context === 'OMEN_GEN') {
+            const generate = async () => {
+                try {
+                    const omens = await omenGenerator.generateOmens(3);
+                    dispatch({ type: "OMENS_GENERATED", seeds: omens });
+                } catch (e) {
+                    console.error("Omen generation failed:", e);
+                    const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+                    dispatch({ type: "GENERATION_FAILED", error: `Could not discern the omens. ${errorMessage}` });
+                }
+            };
+            generate();
+            return;
+        }
+
+        if (context === 'MASK') {
+            const forge = async () => {
+                if (!state.firstMaskLexeme || !state.activeSeed) {
+                    dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing context for mask forging." });
+                    return;
+                }
+                try {
+                  const mask = await maskForger.forgeFirstMask(state.firstMaskLexeme, state.activeSeed);
+                  dispatch({ type: "MASK_FORGED", mask });
+                } catch (e) {
+                  console.error("Mask forging failed:", e);
+                  const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+                  dispatch({ type: "GENERATION_FAILED", error: `Could not forge the mask. ${errorMessage}` });
+                }
+              };
+              forge();
+              return;
+        } 
+        
+        if (context === 'SCENE') {
+          // After accepting a claim, load the first scene.
+          // After moving, load the next scene.
+          const sceneId = state.currentSceneId || 'mountain_forge';
+          dispatch({ type: "LOAD_SCENE", sceneId });
+          return;
+        }
+    }
+
     if (state.phase === "WORLD_GEN") {
         if (!state.activeSeed) {
             dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing seed for world generation." });
@@ -95,35 +149,7 @@ export function useEngine() {
         return;
     }
 
-    if (state.phase !== "LOADING" || state.screen.kind !== 'LOADING') return;
-
-    const { context } = state.screen;
-
-    if (context === 'MASK') {
-        const forge = async () => {
-            if (!state.firstMaskLexeme || !state.activeSeed) {
-                dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing context for mask forging." });
-                return;
-            }
-            try {
-              const mask = await maskForger.forgeFirstMask(state.firstMaskLexeme, state.activeSeed);
-              dispatch({ type: "MASK_FORGED", mask });
-            } catch (e) {
-              console.error("Mask forging failed:", e);
-              const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-              dispatch({ type: "GENERATION_FAILED", error: `Could not forge the mask. ${errorMessage}` });
-            }
-          };
-          forge();
-    } 
-    
-    if (context === 'SCENE') {
-      // After accepting a claim, load the first scene.
-      // After moving, load the next scene.
-      const sceneId = state.currentSceneId || 'mountain_forge';
-      dispatch({ type: "LOAD_SCENE", sceneId });
-    }
-  }, [state.phase, state.screen, state.runId, state.activeClaim, state.activeSeed, state.firstMaskLexeme, encounterGenerator, maskForger]);
+  }, [state.phase, state.screen, state.runId, state.activeClaim, state.activeSeed, state.firstMaskLexeme, encounterGenerator, maskForger, omenGenerator]);
 
   const send = useCallback((ev: GameEvent) => dispatch(ev), []);
 

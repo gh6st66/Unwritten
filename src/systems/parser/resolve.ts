@@ -2,8 +2,9 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { Player } from '../../game/types';
-import type { Intent, Lexicon, ParseResult, ResolveResult, SceneIndex, SceneObject, SlotName, FailReason } from './types';
+import { Player, SceneObject } from '../../game/types';
+import { getItemRule } from '../../data/itemCatalog';
+import type { Intent, Lexicon, ParseResult, ResolveResult, SceneIndex, SlotName, FailReason } from './types';
 
 /** Maps a synonym to all its canonical verbs. Returns an empty array if not found. */
 function findCanonicals(verb: string | undefined, lexicon: Record<string, string[]>): string[] {
@@ -73,19 +74,29 @@ export function resolve(
   }
 
   // 3. Bind objects and other slots from the scene context.
-  const bound = bindSlots(p, scene, lexicon);
-  if (!bound.ok) {
-    // If binding fails, but the verb was ambiguous, check if another interpretation makes sense.
-    // E.g., for "look north", object binding fails, but we should proceed to check direction binding for the "move" intent.
-    if (bound.reason !== 'unknown_object' && bound.reason !== 'ambiguous_object') {
-        return fail(bound.reason!, bound.message!, bound.suggested);
+  let bound = bindSlots(p, scene, lexicon, player, canonicalVerbs);
+  
+  // If binding failed because an object wasn't found, check if a slotless interpretation is possible.
+  if (!bound.ok && bound.reason === 'unknown_object') {
+    const hasSlotlessCandidate = candidateIntents.some(i => i.slots.length === 0);
+    if (hasSlotlessCandidate) {
+      // The command might be a slotless verb with a junk object (e.g., "shout hello").
+      // We can ignore the object binding failure and proceed with empty bindings.
+      bound = { ok: true, bindings: {} };
     }
+  }
+
+  if (!bound.ok) {
+    // Handle other, non-recoverable binding failures like ambiguity.
+    return fail(bound.reason!, bound.message!, bound.suggested);
   }
   
   // 4. Find the best intent that matches the available slots and requirements.
   const matchedIntents = candidateIntents.filter(i => {
-    const hasAllSlots = i.slots.every(s => bound.bindings[s] !== undefined);
+    const hasAllSlots = i.slots.every(s => bound.bindings[s] !== undefined || s === 'object'); // Allow object to be optional for some intents
     const meetsReqs = checkRequirements(i, player, scene);
+    // Special check for no-slot intents. If we have bindings, it's not a match.
+    if (i.slots.length === 0 && Object.keys(bound.bindings).length > 0) return false;
     return hasAllSlots && meetsReqs;
   });
 
@@ -110,6 +121,7 @@ export function resolve(
   return {
     ok: true,
     intent_id: intent.id,
+    intentType: intent.intentType,
     bindings: bound.bindings,
   };
 }
@@ -145,9 +157,60 @@ function findObjectsInScene(name: string | undefined, scene: SceneIndex): SceneO
 }
 
 /** Binds slot fillers from the parse result to concrete entity IDs from the scene. */
-function bindSlots(p: ParseResult, scene: SceneIndex, lexicon: Lexicon): { ok: boolean, bindings: Record<string, string>, reason?: FailReason, message?: string, suggested?: string[] } {
+function bindSlots(
+    p: ParseResult, 
+    scene: SceneIndex, 
+    lexicon: Lexicon, 
+    player: Player,
+    canonicalVerbs: string[]
+): { ok: boolean, bindings: Record<string, string>, reason?: FailReason, message?: string, suggested?: string[] } {
   const bindings: Record<string, string> = {};
   let hadObjectFailure = false;
+
+  const isDropIntent = canonicalVerbs.includes('drop');
+  const isCombineIntent = canonicalVerbs.includes('combine');
+
+  if (isDropIntent && p.slots.object) {
+    const nounToDrop = p.slots.object;
+    const inventoryItems = player.inventory.slots.map(slot => {
+        const rule = getItemRule(slot.itemId);
+        return { ...rule, itemId: slot.itemId };
+    });
+
+    const matches = inventoryItems.filter(item => 
+        item.name.toLowerCase() === nounToDrop || (item.nouns ?? []).includes(nounToDrop)
+    );
+
+    if (matches.length === 0) {
+        return { ok: false, bindings, reason: 'unknown_object', message: `You are not carrying a '${nounToDrop}'.` };
+    }
+    if (matches.length > 1) {
+        return { ok: false, bindings, reason: 'ambiguous_object', message: `Which '${nounToDrop}' do you want to drop?` };
+    }
+    
+    bindings['object'] = matches[0].itemId;
+    return { ok: true, bindings };
+  }
+
+  if (isCombineIntent) {
+    // For combine, we assume ingredients are in inventory.
+    for (const slotName in p.slots) {
+      const noun = p.slots[slotName as SlotName];
+      if (!noun) continue;
+      
+      const itemInInventory = player.inventory.slots.find(s => {
+          const rule = getItemRule(s.itemId);
+          return rule.name.toLowerCase() === noun || (rule.nouns ?? []).includes(noun);
+      });
+
+      if (itemInInventory) {
+          bindings[slotName] = itemInInventory.itemId;
+      } else {
+          return { ok: false, bindings, reason: 'unknown_object', message: `You don't have any '${noun}'.` };
+      }
+    }
+    return { ok: true, bindings };
+  }
 
   for (const slotName in p.slots) {
     const value = p.slots[slotName as SlotName];
@@ -192,8 +255,8 @@ function bindSlots(p: ParseResult, scene: SceneIndex, lexicon: Lexicon): { ok: b
     }
   }
 
-  if (hadObjectFailure && Object.keys(bindings).length === 0) {
-     return { ok: false, bindings, reason: 'unknown_object', message: `You don't see any '${p.slots.object}' here.` };
+  if (hadObjectFailure && Object.keys(bindings).length === 0 && (p.slots.object || p.slots.tool)) {
+     return { ok: false, bindings, reason: 'unknown_object', message: `You don't see any '${p.slots.object || p.slots.tool}' here.` };
   }
 
   return { ok: true, bindings };

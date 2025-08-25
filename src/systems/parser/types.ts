@@ -6,6 +6,8 @@
 // core types from spec
 export type SlotName = "object" | "target" | "tool" | "container" | "direction" | "topic" | "lexeme" | "quantity";
 
+export type IntentType = 'PHYSICAL' | 'SOCIAL' | 'INTERNAL';
+
 export type FailReason =
   | "unknown_intent"
   | "unknown_verb"
@@ -21,6 +23,7 @@ export type FailReason =
 
 export interface Intent {
   id: string;
+  intentType: IntentType;
   verbs: string[]; // canonical + synonyms
   slots: SlotName[];
   requirements?: {
@@ -76,6 +79,7 @@ export interface ParseResult {
 export interface ResolveResult {
   ok: boolean;
   intent_id?: string;
+  intentType?: IntentType;
   bindings?: Record<string, string>;
   reason?: FailReason;
   message?: string; // player-facing

@@ -7,6 +7,7 @@
  * Normalizes a raw input string for parsing.
  * - Converts to lowercase
  * - Trims whitespace
+ * - Strips trailing punctuation
  * - Collapses multiple spaces
  * - Replaces multi-word aliases with their canonical, single-word form (e.g., "blank mask" -> "mask_blank")
  * @param raw The raw user input string.
@@ -14,7 +15,7 @@
  * @returns The normalized string.
  */
 export function normalize(raw: string, aliasMap: Map<string, string>): string {
-  let s = raw.toLowerCase().trim().replace(/\s+/g, " ");
+  let s = raw.toLowerCase().trim().replace(/[.,!?]$/, '').replace(/\s+/g, " ").trim();
   // Iterate through aliases to replace them. This is a simple but effective approach for a limited set.
   // A more advanced system might use Aho-Corasick or other multi-pattern matching algorithms.
   for (const [alias, canon] of aliasMap.entries()) {

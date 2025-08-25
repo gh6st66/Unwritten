@@ -2,22 +2,28 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { GameEvent, GameState, Resources, Mark, Claim, WorldSeed, ResourceId, ActionOutcome, Lexeme } from "./types";
-import { worldSeeds } from "../data/worldSeeds";
+import { GameEvent, GameState, Resources, Mark, Claim, WorldSeed, ResourceId, ActionOutcome, Lexeme, SceneObject } from "./types";
 import { apply, canApply } from "../systems/resourceEngine";
 import { LEXEMES_DATA } from "../data/lexemes";
 import { LexemeTier } from "../types/lexeme";
 import { INTENTS, LEXICON, SCENES } from '../data/parser/content';
 import { ParserEngine } from '../systems/parser/engine';
+import { createInventory, addItem, removeItem, hasItem } from '../systems/inventory';
+import { getItemRule } from '../data/itemCatalog';
+import { recordEvent } from '../systems/chronicle';
+import { RECIPES } from '../data/recipes';
+import { getMarkDef } from "../systems/Marks";
+import { CLAIMS_DATA } from "../data/claims";
 
 const STORAGE_KEY = "unwritten:v1";
 
 // Memoize the parser engine to avoid re-creating it on every action
 const parser = new ParserEngine(INTENTS, LEXICON);
 
-function selectRandomSeeds(count: number): WorldSeed[] {
-  const shuffled = [...worldSeeds].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
+function createInitialInventory() {
+    let inv = createInventory();
+    const result = addItem(inv, 'waterskin', 1, getItemRule('waterskin'));
+    return result.inv;
 }
 
 export const INITIAL: GameState = {
@@ -39,6 +45,7 @@ export const INITIAL: GameState = {
     mask: null,
     unlockedLexemes: LEXEMES_DATA.filter(l => l.tier === LexemeTier.Basic).map(l => l.id),
     flags: new Set(),
+    inventory: createInitialInventory(),
   },
   screen: { kind: "TITLE" },
   currentSceneId: null,
@@ -59,13 +66,42 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     case "REQUEST_NEW_RUN": {
       return {
         ...state,
+        phase: "LOADING",
+        screen: { kind: "LOADING", message: "Discerning the omens...", context: "OMEN_GEN" },
+      };
+    }
+    case "OMENS_GENERATED": {
+      return {
+        ...state,
         phase: "SEED_SELECTION",
-        screen: { kind: "SEED_SELECTION", seeds: selectRandomSeeds(3) },
+        screen: { kind: "SEED_SELECTION", seeds: ev.seeds },
       };
     }
     case "START_RUN": {
+      const initialPlayer = structuredClone(INITIAL.player);
+      
+      // Apply omen modifiers
+      if (ev.seed.resourceModifier) {
+        for (const key in ev.seed.resourceModifier) {
+          const resourceId = key as ResourceId;
+          const delta = ev.seed.resourceModifier[resourceId] ?? 0;
+          initialPlayer.resources[resourceId] = (initialPlayer.resources[resourceId] ?? 0) + delta;
+        }
+      }
+    
+      if (ev.seed.initialPlayerMarkId) {
+        const markDef = getMarkDef(ev.seed.initialPlayerMarkId);
+        const newMark: Mark = {
+          id: markDef.id,
+          label: markDef.name,
+          value: 1,
+        };
+        initialPlayer.marks = mergeMarks(initialPlayer.marks, [newMark]);
+      }
+    
       return {
         ...INITIAL,
+        player: initialPlayer, // Use the modified player object
         phase: "WORLD_GEN",
         runId: crypto.randomUUID(),
         activeSeed: ev.seed,
@@ -113,7 +149,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
         return {
             ...state,
             phase: "CLAIM",
-            screen: { kind: "CLAIM", claim: seedClaim(state.runId) }
+            screen: { kind: "CLAIM", claim: seedClaim(state.runId, state.activeSeed) }
         };
     }
     case "ACCEPT_CLAIM": {
@@ -142,6 +178,9 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
           screen: { kind: "COLLAPSE", reason: `The world faded. (Scene ${ev.sceneId} not found)` }
         };
       }
+      // Note: We copy objects from the template. In a more complex game,
+      // scene state (like which objects are present) would be part of the saved game state.
+      // For now, this reset-on-load is sufficient. Our inventory logic will modify this list in memory.
       return {
         ...state,
         phase: "SCENE",
@@ -150,20 +189,18 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
           kind: "SCENE",
           sceneId: ev.sceneId,
           prompt: sceneData.description,
-          objects: sceneData.objects,
+          objects: structuredClone(sceneData.objects),
           lastActionResponse: null,
           suggestedCommands: [],
         }
       };
     }
     case "ATTEMPT_ACTION": {
-      if (state.phase !== 'SCENE' || !state.currentSceneId) return state;
-      const scene = SCENES[state.currentSceneId];
-      if (!scene) return state; // Should not happen
+      if (state.phase !== 'SCENE' || !state.currentSceneId || state.screen.kind !== 'SCENE') return state;
 
-      const result = parser.resolve(ev.rawCommand, scene, state.player);
+      const result = parser.resolve(ev.rawCommand, SCENES[state.currentSceneId], state.player);
       
-      if (!result.ok && state.screen.kind === 'SCENE') {
+      if (!result.ok) {
         return {
           ...state,
           screen: {
@@ -178,7 +215,203 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
         const intent = INTENTS.find(i => i.id === result.intent_id);
         if (!intent) return state; // Should not happen
         
-        // This is where the 'execute.ts' logic lives now.
+        // --- UNLOCK LOGIC ---
+        const isUnlockAction = intent.id === 'unlock' || 
+                               (intent.id === 'use_on' && result.bindings?.tool?.includes('key'));
+
+        if (isUnlockAction) {
+          const objectSceneId = result.bindings?.object;
+
+          if (!hasItem(state.player.inventory, 'key_forge')) {
+            return { ...state, screen: {...state.screen, lastActionResponse: "You don't have the key for that." }};
+          }
+
+          if (!objectSceneId) {
+             return { ...state, screen: {...state.screen, lastActionResponse: "What do you want to unlock?" }};
+          }
+
+          const sceneObjects = state.screen.objects;
+          const objIndex = sceneObjects.findIndex(o => o.id === objectSceneId);
+          if (objIndex === -1) {
+            return { ...state, screen: {...state.screen, lastActionResponse: "You don't see that here." }};
+          }
+          
+          const objToUnlock = sceneObjects[objIndex];
+
+          if (!objToUnlock.id.startsWith('old_chest')) {
+            return { ...state, screen: {...state.screen, lastActionResponse: "That key doesn't fit that lock." }};
+          }
+          
+          if (!objToUnlock.state?.locked) {
+            return { ...state, screen: {...state.screen, lastActionResponse: "It's already unlocked." }};
+          }
+          
+          const unlockedObj = { ...objToUnlock, state: { ...objToUnlock.state, locked: false }};
+          const newObjects = [...sceneObjects];
+          newObjects[objIndex] = unlockedObj;
+
+          recordEvent({ type: 'OBJECT_UNLOCKED', runId: state.runId, objectId: objectSceneId, sceneId: state.currentSceneId, toolId: 'key_forge' });
+
+          return {
+            ...state,
+            screen: {
+              ...state.screen,
+              objects: newObjects,
+              lastActionResponse: "You hear a solid *click*. The chest is unlocked."
+            }
+          };
+        }
+
+        // --- INVENTORY INTENT LOGIC ---
+        if (intent.id === 'take') {
+          const objectId = result.bindings?.object;
+          if (!objectId) return { ...state, screen: {...state.screen, lastActionResponse: "Take what?"}};
+          
+          const sceneObject = state.screen.objects.find(o => o.id === objectId);
+          if (!sceneObject || !sceneObject.takeable || !sceneObject.itemId) {
+            return { ...state, screen: {...state.screen, lastActionResponse: "You can't take that."}};
+          }
+          const rule = getItemRule(sceneObject.itemId);
+          const addResult = addItem(state.player.inventory, sceneObject.itemId, 1, rule);
+
+          if (!addResult.ok) {
+            const reason = addResult.reason === 'no_space' ? "Your pack is full." : "You already have one.";
+            return { ...state, screen: {...state.screen, lastActionResponse: reason}};
+          }
+
+          recordEvent({ type: 'ITEM_TAKEN', runId: state.runId, itemId: sceneObject.itemId, sceneId: state.currentSceneId });
+
+          const nextPlayerState = { ...state.player, inventory: addResult.inv };
+          const nextScreen: GameState['screen'] = {
+            ...state.screen,
+            objects: state.screen.objects.filter(o => o.id !== objectId),
+            lastActionResponse: `Taken: ${sceneObject.name}.`
+          };
+          return { ...state, player: nextPlayerState, screen: nextScreen };
+        }
+
+        if (intent.id === 'drop') {
+            const itemIdToDrop = result.bindings?.object; // This is an itemId, thanks to the resolver
+            if (!itemIdToDrop) return {...state, screen: {...state.screen, lastActionResponse: "Drop what?"}};
+
+            const rule = getItemRule(itemIdToDrop);
+            const removeResult = removeItem(state.player.inventory, itemIdToDrop, 1);
+
+            if (!removeResult.ok) {
+                return {...state, screen: {...state.screen, lastActionResponse: "You aren't carrying that."}};
+            }
+            
+            recordEvent({ type: 'ITEM_DROPPED', runId: state.runId, itemId: itemIdToDrop, sceneId: state.currentSceneId });
+
+            const droppedObject: SceneObject = {
+              id: `dropped_${itemIdToDrop}_${Date.now()}`,
+              name: rule.name,
+              aliases: rule.nouns ?? [rule.name.toLowerCase()],
+              takeable: true,
+              itemId: itemIdToDrop,
+              tags: [],
+              salience: 0.8,
+            };
+            
+            const nextPlayerState = { ...state.player, inventory: removeResult.inv };
+            const nextScreen: GameState['screen'] = {
+                ...state.screen,
+                objects: [...state.screen.objects, droppedObject],
+                lastActionResponse: `Dropped: ${rule.name}.`
+            };
+            return { ...state, player: nextPlayerState, screen: nextScreen };
+        }
+        
+        if (intent.id === 'inventory') {
+            const inv = state.player.inventory;
+            let message: string;
+            if (inv.slots.length === 0) {
+                message = "You carry nothing.";
+            } else {
+                const lines = inv.slots.map(s => {
+                    const rule = getItemRule(s.itemId);
+                    return `${rule.name}${s.qty > 1 ? ` x${s.qty}` : ''}`;
+                });
+                message = `You are carrying:\n- ${lines.join('\n- ')}`;
+            }
+             return { ...state, screen: {...state.screen, lastActionResponse: message}};
+        }
+
+        // --- NEW CRAFTING/INTERACTION LOGIC ---
+        if (intent.id === 'search') {
+          const objectId = result.bindings?.object;
+          if (!objectId) return { ...state, screen: {...state.screen, lastActionResponse: "Search what?"}};
+          
+          const sceneObjects = state.screen.objects;
+          const objIndex = sceneObjects.findIndex(o => o.id === objectId);
+          if (objIndex === -1) return { ...state, screen: {...state.screen, lastActionResponse: "You don't see that here."}};
+          
+          const obj = sceneObjects[objIndex];
+          if (!obj.state?.searchable) return { ...state, screen: {...state.screen, lastActionResponse: "You find nothing of interest."}};
+          if (obj.state?.searched) return { ...state, screen: {...state.screen, lastActionResponse: "You've already searched that."}};
+
+          const itemIdToCreate = obj.state.searchYields;
+          if (!itemIdToCreate) return { ...state, screen: {...state.screen, lastActionResponse: "You find nothing useful."}};
+
+          const rule = getItemRule(itemIdToCreate);
+          const newObject: SceneObject = {
+            id: `created_${itemIdToCreate}_${Date.now()}`,
+            name: rule.name,
+            aliases: rule.nouns,
+            takeable: true,
+            itemId: itemIdToCreate,
+            tags: rule.tags,
+            salience: 0.8,
+          };
+
+          const newObjects = [...sceneObjects];
+          newObjects[objIndex] = { ...obj, state: { ...obj.state, searched: true } }; // Mark as searched
+          newObjects.push(newObject);
+
+          return { ...state, screen: { ...state.screen, objects: newObjects, lastActionResponse: `You search the ${obj.name} and find some ${rule.name}.` }};
+        }
+
+        if (intent.id === 'destroy') {
+            const objectId = result.bindings?.object;
+            if (!objectId) return { ...state, screen: {...state.screen, lastActionResponse: "Destroy what?"}};
+            const sceneObject = state.screen.objects.find(o => o.id === objectId);
+            if (!sceneObject) return { ...state, screen: {...state.screen, lastActionResponse: "You can't destroy that."}};
+
+            // Prevent destroying key puzzle items for now
+            if (sceneObject.itemId && getItemRule(sceneObject.itemId).keyItem) {
+                return { ...state, screen: {...state.screen, lastActionResponse: `You get the feeling you shouldn't destroy the ${sceneObject.name}.`}};
+            }
+            
+            const nextObjects = state.screen.objects.filter(o => o.id !== objectId);
+            return { ...state, screen: { ...state.screen, objects: nextObjects, lastActionResponse: `You destroy the ${sceneObject.name}.`}};
+        }
+
+        if (intent.id === 'combine') {
+            const item1_id = result.bindings?.object;
+            const item2_id = result.bindings?.tool;
+            if (!item1_id || !item2_id) return { ...state, screen: {...state.screen, lastActionResponse: "Combine what with what?"}};
+
+            const recipe = RECIPES.find(r => 
+                (r.ingredients[0] === item1_id && r.ingredients[1] === item2_id) ||
+                (r.ingredients[0] === item2_id && r.ingredients[1] === item1_id)
+            );
+
+            if (!recipe) return { ...state, screen: {...state.screen, lastActionResponse: "You can't combine those."}};
+
+            let tempInv = state.player.inventory;
+            const r1 = removeItem(tempInv, recipe.ingredients[0], 1);
+            if (!r1.ok) return state; // Should not happen if resolver worked
+            const r2 = removeItem(r1.inv, recipe.ingredients[1], 1);
+            if (!r2.ok) return state; // Should not happen
+
+            const rule = getItemRule(recipe.product);
+            const addResult = addItem(r2.inv, recipe.product, 1, rule);
+
+            return { ...state, player: { ...state.player, inventory: addResult.inv }, screen: { ...state.screen, lastActionResponse: recipe.message }};
+        }
+
+
+        // --- STANDARD INTENT LOGIC ---
         let summary = `You perform the action: ${intent.id}.`;
         let newState = { ...state };
         
@@ -189,23 +422,34 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
                     case 'inspect': {
                         const objectId = result.bindings?.object;
                         if (objectId) {
-                            const sceneObject = scene.objects.find(o => o.id === objectId);
+                            const sceneObject = state.screen.objects.find(o => o.id === objectId);
                             summary = sceneObject?.inspect ?? `You see nothing special about the ${sceneObject?.name}.`;
                         } else {
-                            summary = "You look around.";
+                            summary = SCENES[state.currentSceneId].description;
                         }
                         break;
                     }
-                    case 'take': {
-                        summary = "You take it.";
-                        break;
-                    }
                     case 'open_close': {
-                        const obj = scene.objects.find(o => o.id === result.bindings?.object);
+                        const obj = state.screen.objects.find(o => o.id === result.bindings?.object);
                         if (obj?.state?.locked) {
                             summary = "It's locked.";
+                        } else if (obj) {
+                            const isOpen = !!obj.state?.open;
+                            const newOpenState = !isOpen;
+                            const newObjects = state.screen.objects.map(o => 
+                                o.id === obj.id ? { ...o, state: { ...o.state, open: newOpenState } } : o
+                            );
+                            summary = newOpenState ? `You open the ${obj.name}. It's empty inside.` : `You close the ${obj.name}.`;
+                            return {
+                                ...state,
+                                screen: {
+                                    ...state.screen,
+                                    objects: newObjects,
+                                    lastActionResponse: summary,
+                                }
+                            };
                         } else {
-                            summary = "You open it. It's empty inside.";
+                            summary = "You can't open that.";
                         }
                         break;
                     }
@@ -218,7 +462,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
             }
             case 'move': {
               const direction = result.bindings?.direction as string;
-              const nextSceneId = scene.exits[direction];
+              const nextSceneId = SCENES[state.currentSceneId].exits[direction];
               if (nextSceneId) {
                 summary = `You move ${direction}...`;
                 return {
@@ -237,8 +481,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
         
         return {
           ...newState,
-          phase: "RESOLVE",
-          screen: { kind: "RESOLVE", summary }
+          screen: { ...state.screen, lastActionResponse: summary },
         };
       }
       
@@ -286,11 +529,19 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       return { ...state, phase: "COLLAPSE", screen: { kind: "COLLAPSE", reason: ev.reason } };
     }
     case "LOAD_STATE": {
-      // Re-hydrate player.flags as a Set
-      if (ev.snapshot.player.flags && !(ev.snapshot.player.flags instanceof Set)) {
-        ev.snapshot.player.flags = new Set(ev.snapshot.player.flags as any);
-      }
-      return ev.snapshot;
+      const snapshot = ev.snapshot;
+      // Rehydrate complex types
+      const flags = Array.isArray(snapshot.player.flags) ? new Set(snapshot.player.flags as string[]) : new Set<string>();
+      const inventory = snapshot.player.inventory ? createInventory(snapshot.player.inventory) : createInventory();
+      
+      return {
+        ...snapshot,
+        player: {
+          ...snapshot.player,
+          flags,
+          inventory,
+        }
+      };
     }
     case "RESET_GAME": {
       localStorage.removeItem(STORAGE_KEY);
@@ -301,26 +552,19 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
   }
 }
 
-function seedClaim(seed: string): Claim {
-  // placeholder deterministic stub
-  const pool: Claim[] = [
-    {
-      id: "betray", text: "You will betray an ally.", severity: 2 as const,
-      embrace: { label: "Embrace this path", description: "Accept the necessity of sacrifice." },
-      resist: { label: "Resist this fate", description: "Hold to loyalty, no matter the cost." },
-    },
-    {
-      id: "forsake", text: "You will forsake your vows.", severity: 1 as const,
-      embrace: { label: "Embrace this path", description: "Recognize that oaths can be cages." },
-      resist: { label: "Resist this fate", description: "An oath is the core of identity." },
-    },
-    {
-      id: "ignite", text: "You will ignite an uprising.", severity: 3 as const,
-      embrace: { label: "Embrace this path", description: "Become the spark that burns the old world down." },
-      resist: { label: "Resist this fate", description: "Seek order amidst the chaos." },
+function seedClaim(runId: string, seed: WorldSeed | null): Claim {
+  let pool = [...CLAIMS_DATA];
+
+  // If a seed with a claim bias is provided, filter the pool.
+  if (seed?.claimBias && seed.claimBias.length > 0) {
+    const biasedPool = CLAIMS_DATA.filter(c => seed.claimBias!.includes(c.id));
+    if (biasedPool.length > 0) {
+      pool = biasedPool;
     }
-  ];
-  const idx = Math.abs(hash(seed)) % pool.length;
+  }
+
+  // Use the runId hash to deterministically pick from the (potentially filtered) pool.
+  const idx = Math.abs(hash(runId)) % pool.length;
   return pool[idx];
 }
 
