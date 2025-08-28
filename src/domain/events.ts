@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+import { EngineDelta } from "../accord/types";
+import { OmenWeights } from "../omen/types";
+
 // Simplified for frontend simulation
 
 // Payloads for events, without the timestamp.
@@ -16,7 +19,10 @@ export type ChronicleEventPayload =
   | { type: "ITEM_DROPPED"; runId: string; itemId: string; sceneId: string; }
   | { type: "OBJECT_UNLOCKED"; runId: string; objectId: string; sceneId: string | null; toolId: string; }
   | { type: "OBJECT_DESTROYED"; runId: string; objectId: string; objectName: string; sceneId: string; }
-  // New Echo Events
+  // New Systemic Events
+  | { type: "ACCORD_DELTA_APPLIED"; runId: string; sceneId: string | null; intentId: string; delta: EngineDelta; }
+  | { type: "OMEN_WEIGHTS_UPDATED"; runId: string; reason: string; newWeights: OmenWeights['values']; }
+  // Echo Events
   | { type: "BRIDGE_COLLAPSE"; runId: string; sceneId: string; }
   | { type: "SPIRIT_HONORED"; runId: string; sceneId: string; }
   | { type: "IDOL_STOLEN"; runId: string; sceneId: string; }

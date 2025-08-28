@@ -1,4 +1,21 @@
+import { z } from 'zod';
 import { Omen } from "../game/types";
+
+const OmenSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  severity: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  embrace: z.object({
+    label: z.string(),
+    description: z.string(),
+  }),
+  resist: z.object({
+    label: z.string(),
+    description: z.string(),
+  }),
+});
+
+const OmensDataSchema = z.array(OmenSchema);
 
 export const OMENS_DATA: Omen[] = [
   {
@@ -30,3 +47,11 @@ export const OMENS_DATA: Omen[] = [
     resist: { label: "Resist this fate", description: "Some knowledge is too dangerous to share." },
   }
 ];
+
+// Validate the data against the schema at module load time.
+try {
+  OmensDataSchema.parse(OMENS_DATA);
+} catch (e) {
+  console.error("OMENS_DATA validation failed:", e);
+  throw new Error("Invalid Omen data structure.");
+}

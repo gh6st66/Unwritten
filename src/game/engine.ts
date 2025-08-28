@@ -9,9 +9,13 @@ import { OmenGenerator } from "../systems/OmenGenerator";
 
 const STORAGE_KEY = "unwritten:v1";
 
+type AsyncTask = () => Promise<void>;
+
 export function useEngine() {
   const [state, dispatch] = useReducer(reduce, INITIAL);
   const [canContinue, setCanContinue] = useState(false);
+  const [asyncTaskQueue, setAsyncTaskQueue] = useState<AsyncTask[]>([]);
+  const [isAsyncTaskRunning, setIsAsyncTaskRunning] = useState(false);
 
   useEffect(() => {
     // Check for a saved game on initial mount
@@ -32,6 +36,20 @@ export function useEngine() {
 
   const maskForger = useMemo(() => new MaskForger(), []);
   const originGenerator = useMemo(() => new OmenGenerator(), []);
+
+  // Effect to process the async task queue
+  useEffect(() => {
+    if (!isAsyncTaskRunning && asyncTaskQueue.length > 0) {
+      setIsAsyncTaskRunning(true);
+      const [nextTask, ...remainingQueue] = asyncTaskQueue;
+      setAsyncTaskQueue(remainingQueue);
+
+      nextTask().finally(() => {
+        setIsAsyncTaskRunning(false);
+      });
+    }
+  }, [asyncTaskQueue, isAsyncTaskRunning]);
+
 
   useEffect(() => {
     // Only save state if we're not on the title screen
@@ -83,70 +101,67 @@ export function useEngine() {
 
 
   useEffect(() => {
+    let aborted = false;
+
+    const queueTask = (task: AsyncTask) => {
+      if (!aborted) {
+        setAsyncTaskQueue(q => [...q, task]);
+      }
+    };
+    
     if (state.phase === "LOADING" && state.screen.kind === 'LOADING') {
         const { context } = state.screen;
 
         if (context === 'ORIGIN_GEN') {
-            const generate = async () => {
+            queueTask(async () => {
                 try {
                     const origins = await originGenerator.generateOrigins(3);
-                    dispatch({ type: "ORIGINS_GENERATED", origins: origins });
+                    if (!aborted) dispatch({ type: "ORIGINS_GENERATED", origins });
                 } catch (e) {
                     console.error("Origin generation failed:", e);
                     const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-                    dispatch({ type: "GENERATION_FAILED", error: `Could not read the threads of fate. ${errorMessage}` });
+                    if (!aborted) dispatch({ type: "GENERATION_FAILED", error: `Could not read the threads of fate. ${errorMessage}` });
                 }
-            };
-            generate();
-            return;
-        }
-
-        if (context === 'MASK') {
-            const forge = async () => {
-                if (!state.firstMaskLexeme || !state.activeOrigin) {
-                    dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing context for mask forging." });
-                    return;
-                }
-                try {
-                  const mask = await maskForger.forgeFirstMask(state.firstMaskLexeme, state.activeOrigin);
-                  dispatch({ type: "MASK_FORGED", mask });
-                } catch (e) {
-                  console.error("Mask forging failed:", e);
-                  const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-                  dispatch({ type: "GENERATION_FAILED", error: `Could not forge the mask. ${errorMessage}` });
-                }
-              };
-              forge();
-              return;
-        } 
-        
-        if (context === 'SCENE') {
-          // After accepting an omen, load the first scene.
-          // After moving, load the next scene.
+            });
+        } else if (context === 'MASK') {
+          queueTask(async () => {
+            if (!state.firstMaskLexeme || !state.activeOrigin) {
+                if (!aborted) dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing context for mask forging." });
+                return;
+            }
+            try {
+              const mask = await maskForger.forgeFirstMask(state.firstMaskLexeme, state.activeOrigin);
+              if (!aborted) dispatch({ type: "MASK_FORGED", mask });
+            } catch (e) {
+              console.error("Mask forging failed:", e);
+              const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+              if (!aborted) dispatch({ type: "GENERATION_FAILED", error: `Could not forge the mask. ${errorMessage}` });
+            }
+          });
+        } else if (context === 'SCENE') {
+          // This is synchronous, no need to queue.
           const sceneId = state.currentSceneId || 'mountain_forge';
           dispatch({ type: "LOAD_SCENE", sceneId });
-          return;
         }
-    }
-
-    if (state.phase === "WORLD_GEN") {
+    } else if (state.phase === "WORLD_GEN") {
         if (!state.activeOrigin) {
             dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing origin for world generation." });
-            return;
+        } else {
+          try {
+              const world = generateWorld({ worldSeed: state.runId, historyYears: 50, variance: 0.1 });
+              const civs = generateCivs(world, 3);
+              dispatch({ type: "WORLD_GENERATED", world, civs });
+          } catch (e) {
+              console.error("World generation failed:", e);
+              const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+              dispatch({ type: "GENERATION_FAILED", error: `Could not generate world. ${errorMessage}` });
+          }
         }
-        
-        try {
-            const world = generateWorld({ worldSeed: state.runId, historyYears: 50, variance: 0.1 });
-            const civs = generateCivs(world, 3);
-            dispatch({ type: "WORLD_GENERATED", world, civs });
-        } catch (e) {
-            console.error("World generation failed:", e);
-            const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-            dispatch({ type: "GENERATION_FAILED", error: `Could not generate world. ${errorMessage}` });
-        }
-        return;
     }
-
+    
+    return () => {
+      aborted = true;
+    };
   }, [state.phase, state.screen, state.runId, state.activeOmen, state.activeOrigin, state.firstMaskLexeme, maskForger, originGenerator]);
 
   const send = useCallback((ev: GameEvent) => dispatch(ev), []);

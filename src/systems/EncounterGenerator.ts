@@ -1,4 +1,3 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { GameState, Encounter, SpeakerContext, Affiliation, ResourceId } from "../game/types";
 import { EncounterEngine, defaultRules } from "./encounters/EncounterEngine";
 import { ENCOUNTER_SCHEMAS } from "../data/encounterSchemas";
@@ -17,8 +16,6 @@ import {
 import { resolveLexeme } from "./lexicon/resolveLexeme";
 import { NPC as CivNPC } from "../civ/types";
 import { Region as WorldRegion, World } from "../world/types";
-
-const MODEL = "gemini-2.5-flash";
 
 const factionToAffiliationMap: Record<string, Affiliation> = {
     // This should be populated based on generated faction names or agendas
@@ -104,10 +101,8 @@ function convertWorldRegionToEncounterRegionState(world: World, worldRegion: Wor
 
 
 export class EncounterGenerator {
-  private ai: GoogleGenAI;
-
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+    // The Gemini client is no longer initialized here.
   }
 
   public async generate(state: GameState): Promise<Encounter> {
@@ -150,60 +145,20 @@ export class EncounterGenerator {
 
     const prompt = this.buildPrompt(structure, state, npcIndex);
 
-    const res = await this.ai.models.generateContent({
-        model: MODEL,
-        contents: prompt,
-        config: { 
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    prompt: { type: Type.STRING },
-                    internalThoughtHint: { type: Type.STRING },
-                    options: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                id: { type: Type.STRING },
-                                label: { type: Type.STRING },
-                                effects: {
-                                    type: Type.ARRAY,
-                                    items: {
-                                        type: Type.OBJECT,
-                                        properties: {
-                                            resource: { type: Type.STRING },
-                                            delta: { type: Type.NUMBER }
-                                        },
-                                        propertyOrdering: ["resource", "delta"]
-                                    }
-                                },
-                                grantsMarks: {
-                                    type: Type.ARRAY,
-                                    items: {
-                                        type: Type.OBJECT,
-                                        properties: {
-                                            id: { type: Type.STRING },
-                                            label: { type: Type.STRING },
-                                            value: { type: Type.INTEGER }
-                                        },
-                                        propertyOrdering: ["id", "label", "value"]
-                                    }
-                                }
-                            },
-                            propertyOrdering: ["id", "label", "effects", "grantsMarks"]
-                        }
-                    }
-                },
-                propertyOrdering: ["prompt", "internalThoughtHint", "options"]
-            }
-        }
-    });
-    
-    const text = res.text;
-    
     try {
-      const parsed = JSON.parse(text);
+      const response = await fetch('/api/generate-encounter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Server responded with ${response.status}: ${errorBody}`);
+      }
+      
+      const parsed = await response.json();
+
       return {
         ...parsed,
         id: crypto.randomUUID(),
@@ -213,7 +168,7 @@ export class EncounterGenerator {
         })),
       };
     } catch (e) {
-      console.error("Failed to parse Gemini response:", text, e);
+      console.error("Failed to fetch or parse encounter from server:", e);
       return this.getFallbackEncounter();
     }
   }

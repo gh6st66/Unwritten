@@ -70,6 +70,12 @@ export const glossaryData: GlossaryCategory[] = [
     "name": "Identity & Persistence",
     "entries": [
       {
+        "id": "unwritten",
+        "term": "The Unwritten",
+        "definition": "The player character; a being whose fate is not yet fixed, capable of wearing masks to assume identities and alter the world's history through their actions and inevitable Collapse.",
+        "updatedAt": "2025-08-21T00:00:00Z"
+      },
+      {
         "id": "mask",
         "term": "Mask",
         "definition": "Unique artifacts tied to identity. Masks grant traits, modify encounters, and can carry forward across runs through provenance or legacy. They are the most valuable items in the world.",

@@ -1,38 +1,41 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useEngine } from "../game/engine";
-import { ScreenRenderer } from "./ScreenRenderer";
 import { GameState, Omen, Origin, ResourceId, Lexeme } from "../game/types";
 import { GlossaryView } from "./GlossaryView";
 import { glossaryData } from "../data/glossary";
 import { LoadingScreen } from "./LoadingScreen";
 import TitleScreen from "./TitleScreen";
 import { ChronicleHome } from "./chronicle/ChronicleHome";
+import { Game } from "./Game";
+import { GameStatusOverlay } from "./GameStatusOverlay";
 
 export default function App() {
   const { state, send, canContinue, loadGame } = useEngine();
   const [showGlossary, setShowGlossary] = useState(false);
   const [showChronicle, setShowChronicle] = useState(false);
 
-  const onStartRun = (origin: Origin) => {
-    send({ type: 'START_RUN', origin });
-  };
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 'g') {
+        setShowGlossary(g => !g);
+      }
+      if (event.key.toLowerCase() === 'c') {
+        setShowChronicle(c => !c);
+      }
+    };
 
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  const onStartRun = (origin: Origin) => send({ type: 'START_RUN', origin });
   const onCommitFirstMask = (lexeme: Lexeme) => send({ type: 'COMMIT_FIRST_MASK', lexeme });
   const onContinueAfterReveal = () => send({ type: 'CONTINUE_AFTER_REVEAL' });
-
-  const onAcceptOmen = (omen: Omen, approach: 'embrace' | 'resist') => {
-    if (state.phase === "OMEN") {
-      send({ type: "ACCEPT_OMEN", omen, approach });
-    }
-  };
-
-  const onAttemptAction = (command: string) => {
-    send({ type: 'ATTEMPT_ACTION', rawCommand: command });
-  };
-  
-  const onReset = () => {
-    send({ type: "RESET_GAME" });
-  };
+  const onAcceptOmen = (omen: Omen, approach: 'embrace' | 'resist') => send({ type: "ACCEPT_OMEN", omen, approach });
+  const onAttemptAction = (command: string) => send({ type: 'ATTEMPT_ACTION', rawCommand: command });
+  const onReset = () => send({ type: "RESET_GAME" });
 
   if (state.phase === "TITLE") {
     return (
@@ -45,10 +48,11 @@ export default function App() {
           onOpenChronicle={() => setShowChronicle(true)}
           onOpenSettings={() => alert("Settings are not yet implemented.")}
           onOpenTester={() => send({ type: 'OPEN_TESTER' })}
-          version="0.3.0"
+          version="0.3.1"
         />
         {showGlossary && <GlossaryView categories={glossaryData} onClose={() => setShowGlossary(false)} />}
         {showChronicle && <ChronicleHome onClose={() => setShowChronicle(false)} />}
+        <GameStatusOverlay state={state} onToggleChronicle={() => setShowChronicle(c => !c)} onToggleGlossary={() => setShowGlossary(g => !g)} />
       </>
     );
   }
@@ -61,20 +65,20 @@ export default function App() {
   return (
     <div className="app-container">
       <Header state={state} />
-      <ScreenRenderer
-        screen={state.screen}
-        player={state.player}
+      <Game
         state={state}
-        onAttemptAction={onAttemptAction}
         onStartRun={onStartRun}
         onCommitFirstMask={onCommitFirstMask}
         onContinueAfterReveal={onContinueAfterReveal}
         onAcceptOmen={onAcceptOmen}
+        onAttemptAction={onAttemptAction}
         onReset={onReset}
         onCloseTester={() => send({ type: 'CLOSE_TESTER' })}
       />
-      <Footer onGlossaryOpen={() => setShowGlossary(true)} />
+      <Footer onGlossaryOpen={() => setShowGlossary(true)} onChronicleOpen={() => setShowChronicle(true)} />
       {showGlossary && <GlossaryView categories={glossaryData} onClose={() => setShowGlossary(false)} />}
+      {showChronicle && <ChronicleHome onClose={() => setShowChronicle(false)} />}
+      <GameStatusOverlay state={state} onToggleChronicle={() => setShowChronicle(c => !c)} onToggleGlossary={() => setShowGlossary(g => !g)} />
     </div>
   );
 }
@@ -102,13 +106,18 @@ function Header({ state }: { state: GameState }) {
   );
 }
 
-function Footer({ onGlossaryOpen }: { onGlossaryOpen: () => void }) {
+function Footer({ onGlossaryOpen, onChronicleOpen }: { onGlossaryOpen: () => void; onChronicleOpen: () => void; }) {
   return (
     <div className="p-3 text-xs opacity-70 border-t flex justify-between items-center">
-      <span>Unwritten • React + TS • Gemini-ready</span>
-      <button className="glossary-toggle" onClick={onGlossaryOpen}>
-        Glossary
-      </button>
+      <span>Unwritten • React + TS</span>
+      <div style={{display: 'flex', gap: '1rem'}}>
+        <button className="glossary-toggle" onClick={onChronicleOpen}>
+          Chronicle (c)
+        </button>
+        <button className="glossary-toggle" onClick={onGlossaryOpen}>
+          Glossary (g)
+        </button>
+      </div>
     </div>
   );
 }

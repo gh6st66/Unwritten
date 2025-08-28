@@ -1,17 +1,41 @@
-import React from "react";
-// Note: The original content of this file was part of a different application
-// structure and was causing errors due to missing module dependencies.
-// It has been replaced with a placeholder as it does not appear to be
-// used in the current application flow initiated by App.tsx.
+import React from 'react';
+import { GameState, Omen, Origin, Lexeme } from "../game/types";
+import { ScreenRenderer } from "./ScreenRenderer";
+import { PlayerStatus } from './PlayerStatus';
 
-export const Game: React.FC = () => {
+type Props = {
+  state: GameState;
+  onAttemptAction: (command: string) => void;
+  onStartRun: (origin: Origin) => void;
+  onCommitFirstMask: (lexeme: Lexeme) => void;
+  onContinueAfterReveal: () => void;
+  onAcceptOmen: (omen: Omen, approach: 'embrace' | 'resist') => void;
+  onReset: () => void;
+  onCloseTester: () => void;
+};
+
+export const Game: React.FC<Props> = (props) => {
+  const { state } = props;
+
+  if (state.phase === 'SCENE') {
+    return (
+       <ScreenRenderer
+        screen={state.screen}
+        player={state.player}
+        state={state}
+        {...props}
+      />
+    );
+  }
+
   return (
-    <div>
-      <h2>Game Component</h2>
-      <p>
-        This is a placeholder for the Game component. The original implementation
-        was not integrated into the main application and was causing build errors.
-      </p>
+    <div className="p-4">
+      <ScreenRenderer
+        screen={state.screen}
+        player={state.player}
+        state={state}
+        {...props}
+      />
     </div>
   );
 };

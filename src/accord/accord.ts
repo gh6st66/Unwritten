@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import { GameState } from "../game/types";
-import { EngineDelta, IntentCtx, NPCState, Condition, VariantBlock } from "./types";
+import { EngineDelta, IntentCtx, NPCState, Condition, VariantBlock, ID } from "./types";
 import { INTENT_WEIGHTS, SCOPE_FACTORS } from "../data/accord/weights";
 import { TEXT_VARIANTS } from "../data/text/variants";
 import { SCENES } from "../data/parser/content";
@@ -21,11 +21,11 @@ export function handleIntent(ctx: IntentCtx, state: GameState): EngineDelta {
     return { lineId: 'ACTION_DEFAULT' };
   }
 
-  // For now, assume the target is always Elder Anah for demo purposes
-  const targetNpcId = "ELDER_ANAH";
-  const targetNpc = state.npcs[targetNpcId];
+  // Resolve the target NPC from parser bindings. Fallback for now.
+  const targetId = ctx.bindings.object as ID || "ELDER_ANAH";
+  const targetNpc = state.npcs[targetId];
   if (!targetNpc) {
-     return { lineId: 'ACTION_DEFAULT' };
+     return { lineId: 'ACTION_DEFAULT', debug: { error: `NPC target '${targetId}' not found.` } };
   }
   
   const maskAffinity = targetNpc.factions.reduce((acc, factionId) => {
@@ -34,7 +34,7 @@ export function handleIntent(ctx: IntentCtx, state: GameState): EngineDelta {
   }, 0);
 
   // 1. Recognition Delta
-  const recognition: { npcId: string, trust?: number, fear?: number } = { npcId: targetNpcId };
+  const recognition: { npcId: string, trust?: number, fear?: number } = { npcId: targetId };
   if (weightDef.trust) {
     recognition.trust = weightDef.trust + Math.round(maskAffinity / 2);
   }
@@ -63,6 +63,7 @@ export function applyDelta(state: GameState, delta: EngineDelta): GameState {
     if (delta.recognition) {
         const nextNpcs = { ...next.npcs };
         for (const r of delta.recognition) {
+            if (!nextNpcs[r.npcId]) continue;
             const npc = { ...nextNpcs[r.npcId] };
             npc.recognition = { ...npc.recognition };
             if (r.trust) npc.recognition.trust += r.trust;
@@ -85,28 +86,35 @@ export function applyDelta(state: GameState, delta: EngineDelta): GameState {
 }
 
 /**
- * A simple DSL condition evaluator.
+ * A tiny, safe DSL interpreter for text variant conditions.
+ * It only supports the format: "npc('ID').recognition.key [>|<] value"
  */
 export function evaluateCondition(condition: Condition, state: GameState): boolean {
     try {
-        const npcRegex = /npc\('(.+?)'\)\.(.+)/;
-        const match = condition.match(npcRegex);
-        if (match) {
-            const [, npcId, path] = match;
-            const npc = state.npcs[npcId];
-            if (!npc) return false;
-            
-            const [key1, key2] = path.split('.') as [keyof NPCState, keyof NPCState['recognition']];
-            if (key1 === 'recognition' && npc.recognition[key2] !== undefined) {
-                const operator = condition.includes('>') ? '>' : '<';
-                const value = parseInt(condition.split(operator)[1].trim(), 10);
-                if (operator === '>') return npc.recognition[key2] > value;
-                if (operator === '<') return npc.recognition[key2] < value;
-            }
+        const pattern = /npc\('([^']+)'\)\.recognition\.(\w+)\s*([><])\s*(\d+)/;
+        const match = condition.match(pattern);
+
+        if (!match) {
+            console.warn(`Invalid condition format: "${condition}"`);
+            return false;
         }
+
+        const [, npcId, key, operator, valueStr] = match;
+        const value = parseInt(valueStr, 10);
+        
+        const npc = state.npcs[npcId];
+        if (!npc) return false;
+        
+        const recognitionKey = key as keyof NPCState['recognition'];
+        if (npc.recognition[recognitionKey] === undefined) return false;
+        
+        const npcValue = npc.recognition[recognitionKey];
+
+        if (operator === '>') return npcValue > value;
+        if (operator === '<') return npcValue < value;
+
     } catch (e) {
-        console.error("Error evaluating condition:", condition, e);
-        return false;
+        console.error(`Error evaluating condition: "${condition}"`, e);
     }
     return false;
 }
@@ -118,13 +126,18 @@ export function selectVariant(blockId: string, state: GameState): string {
   const block = TEXT_VARIANTS[blockId];
   if (!block) return `Error: Missing variant block '${blockId}'`;
 
-  for (const variant of block.variants) {
-    if (variant.if && evaluateCondition(variant.if, state)) {
-      return variant.text;
-    }
+  // Find the first variant whose condition passes
+  const matchedVariant = block.variants.find(variant => 
+    variant.if ? evaluateCondition(variant.if, state) : false
+  );
+
+  if (matchedVariant) {
+    return matchedVariant.text;
   }
+
   // Return the default (last, no 'if' condition)
-  return block.variants[block.variants.length - 1].text;
+  const defaultVariant = block.variants.find(variant => !variant.if);
+  return defaultVariant ? defaultVariant.text : `Error: No default variant for '${blockId}'`;
 }
 
 export function selectAtmosphere(sceneId: string, state: GameState): string[] {

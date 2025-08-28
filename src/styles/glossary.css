@@ -28,18 +28,35 @@
   overflow-y: auto;
   position: relative;
   box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.glossary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.glossary-main-title {
+  margin: 0;
+  padding: 0;
+  border: none;
+  color: var(--primary-text-color);
 }
 
 .glossary-close-button {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.75rem;
+  position: static; /* Unset absolute positioning */
   font-size: 2rem;
   line-height: 1;
   background: none;
   border: none;
   color: var(--secondary-text-color);
-  padding: 0.5rem;
+  padding: 0 0.5rem;
   cursor: pointer;
 }
 .glossary-close-button:hover {
@@ -47,17 +64,37 @@
   background-color: transparent;
 }
 
-.glossary-main-title {
-  margin-top: 0;
+
+.glossary-search-container {
   margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.glossary-search-input {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #2a2a2e;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
   color: var(--primary-text-color);
+  font-size: 1rem;
+}
+.glossary-search-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
 }
 
 .glossary-list {
   padding: 0;
   margin: 0;
+  overflow-y: auto; /* Make only this part scroll */
+}
+
+.glossary-no-results {
+  color: var(--secondary-text-color);
+  font-style: italic;
+  text-align: center;
+  padding: 2rem;
 }
 
 .glossary-category {

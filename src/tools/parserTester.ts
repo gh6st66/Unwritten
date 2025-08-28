@@ -13,7 +13,6 @@ const mockScene = SCENES['mountain_forge'];
 const mockPlayer: Player = {
   id: "p1",
   name: "Tester",
-  // FIX: Add missing maskTag property.
   maskTag: 'HERALD',
   resources: { [ResourceId.TIME]: 6, [ResourceId.CLARITY]: 3, [ResourceId.CURRENCY]: 0 },
   marks: [],

@@ -16,6 +16,7 @@ import { handleIntent, applyDelta, selectVariant, selectAtmosphere } from "../ac
 import { IntentCtx } from "../accord/types";
 import { INITIAL_ACCORD, INITIAL_FACTIONS, INITIAL_NPCS } from "../data/accord/state";
 import { INITIAL_OMEN_WEIGHTS } from "../data/omen/initial";
+import { updateOmenWeights } from "../omen/omen";
 
 const STORAGE_KEY = "unwritten:v1";
 
@@ -40,7 +41,7 @@ export const INITIAL: GameState = {
     marks: [],
     mask: null,
     unlockedLexemes: LEXEMES_DATA.filter(l => l.tier === LexemeTier.Basic).map(l => l.id),
-    flags: new Set(),
+    flags: new Set<string>(),
     inventory: createInventory(),
   },
   npcs: INITIAL_NPCS,
@@ -154,10 +155,14 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
         ? { id: 'fate-embraced', label: 'Fate-Embraced', value: 1 }
         : { id: 'fate-defiant', label: 'Fate-Defiant', value: 1 };
 
+      const newOmenWeights = updateOmenWeights(state.omenWeights, { type: 'CHOICE', tag: ev.approach });
+      recordEvent({type: 'OMEN_WEIGHTS_UPDATED', runId: state.runId, reason: 'accept_omen', newWeights: newOmenWeights.values });
+
       return {
         ...state,
         phase: "LOADING",
         activeOmen: ev.omen,
+        omenWeights: newOmenWeights,
         player: {
           ...state.player,
           marks: mergeMarks(state.player.marks, [startingMark]),
@@ -176,15 +181,13 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
         };
       }
       
+      // Ensure immutability by deep cloning scene data for runtime state.
       const newObjects = structuredClone(sceneData.objects);
-      const newExits = structuredClone(sceneData.exits);
-      let sceneDescription = sceneData.description;
+      const sceneDescription = sceneData.description;
       const newFlags = new Set(state.player.flags);
       
       const narrativeLog = [sceneDescription, ...selectAtmosphere(ev.sceneId, state)];
       
-      SCENES[ev.sceneId].exits = newExits;
-
       return {
         ...state,
         phase: "SCENE",
@@ -208,7 +211,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       
       if (!result.ok || !result.intent_id) {
         const currentScreen = state.screen;
-        return { ...state, screen: { ...currentScreen, narrativeLog: [...currentScreen.narrativeLog, result.message ?? "Nothing happens."], suggestedCommands: result.suggested ?? [] } };
+        return { ...state, screen: { ...currentScreen, narrativeLog: [...currentScreen.narrativeLog, `> ${ev.rawCommand}`, result.message ?? "Nothing happens."], suggestedCommands: result.suggested ?? [] } };
       }
       
       const intentCtx: IntentCtx = {
@@ -221,6 +224,8 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     
       const delta = handleIntent(intentCtx, state);
       let nextState = applyDelta(state, delta);
+
+      recordEvent({type: 'ACCORD_DELTA_APPLIED', runId: state.runId, sceneId: state.currentSceneId, intentId: intentCtx.intentId, delta });
       
       const currentScreen = nextState.screen.kind === 'SCENE' ? nextState.screen : null;
       if (currentScreen) {
@@ -249,8 +254,13 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       localStorage.removeItem('unwritten:chronicle:events');
       return INITIAL;
     }
-    default:
+    default: {
+      // This is a trick to enforce exhaustiveness checking.
+      // If you add a new event type and don't handle it in the switch,
+      // TypeScript will error here because `ev` will not be of type `never`.
+      const _exhaustiveCheck: never = ev;
       return state;
+    }
   }
 }
 

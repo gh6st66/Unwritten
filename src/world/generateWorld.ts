@@ -5,18 +5,12 @@
 import { World, WorldGenConfig, GeoCell, Region } from './types';
 import { makeRNG } from './rng';
 import { DialectId } from '../systems/dialect/types';
+import DIALECTS_DATA from '../data/dialects.json';
+
 
 // NOTE: This is a simplified stub implementation of the design document.
 // A full implementation would involve complex algorithms for noise generation,
 // watershed analysis, and Voronoi partitioning.
-
-const DIALECTS_DATA = [
-  { "id": "northern-trade-pidgin", "name": "Northern Trade Pidgin" },
-  { "id": "old-high-imperial", "name": "Old High Imperial" },
-  { "id": "river-cant", "name": "River Cant" },
-  { "id": "salt-whispers", "name": "Salt-Whispers" },
-  { "id": "sun-bleached-creole", "name": "Sun-Bleached Creole" }
-];
 
 interface Dialect {
   id: DialectId;

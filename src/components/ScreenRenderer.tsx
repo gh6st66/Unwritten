@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { GameState, GameScreen, Omen, Origin, Lexeme, Player, SceneObject } from "../game/types";
 import { OriginSelectionView } from "./SeedSelectionView";
 import { MaskRitual } from "../features/ritual/MaskRitual";
@@ -16,6 +16,7 @@ import '../styles/parser.css';
 import '../styles/narrativeLog.css';
 import { OmenView } from "./ClaimView";
 import { PlayerStatus } from "./PlayerStatus";
+import { LiveRegion } from "./LiveRegion";
 
 type Props = {
   screen: GameScreen;
@@ -93,6 +94,14 @@ export function ScreenRenderer(props: Props) {
     }
   };
 
+  // Memoize the last log entry for the LiveRegion to prevent unnecessary announcements
+  const lastLogEntry = useMemo(() => {
+    if (screen.kind === 'SCENE' && screen.narrativeLog.length > 0) {
+      return screen.narrativeLog[screen.narrativeLog.length - 1];
+    }
+    return '';
+  }, [screen]);
+
   switch (screen.kind) {
     case "GENERATION_TESTER":
       return <GenerationTester onClose={onCloseTester} />;
@@ -144,6 +153,7 @@ export function ScreenRenderer(props: Props) {
       }
       return (
         <div className={sceneWrapperClasses.join(' ')}>
+          <LiveRegion message={lastLogEntry} />
           <div className="narrative-log">
             {screen.narrativeLog.map((line, index) => <p key={index} className="narrative-log-entry">{line}</p>)}
           </div>

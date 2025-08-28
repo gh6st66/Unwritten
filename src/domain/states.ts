@@ -2,6 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
+import { ChronicleEvent } from './events';
 
 export type ProvenanceHop = {
   ownerId: string;
@@ -37,5 +38,5 @@ export interface ChronicleData {
   runs: Record<string, RunState>;
   masks: Record<string, MaskState>;
   figures: Record<string, FigureState>;
-  events: any[]; // for timeline view
+  events: ChronicleEvent[]; // for timeline view
 }
