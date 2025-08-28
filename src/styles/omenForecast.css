@@ -1,0 +1,65 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+.omen-forecast-container {
+  margin-top: 1rem;
+}
+
+.omen-forecast-list {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-around;
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0 0;
+}
+
+.omen-forecast-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+  flex: 1;
+}
+
+.omen-forecast-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--secondary-text-color);
+}
+
+.omen-forecast-band {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  cursor: help;
+  border: 1px solid transparent;
+}
+
+.band--unlikely {
+  color: #a0a0a0;
+  background-color: #2a2a2e;
+  border-color: #3f3f46;
+}
+.band--possible {
+  color: #e0e0e0;
+  background-color: #37373e;
+  border-color: #52525b;
+}
+.band--favored {
+  color: #9ad0ff;
+  background-color: #2a3a4a;
+  border-color: #37718e;
+}
+.band--very-likely {
+  color: #d6c1a3;
+  background-color: #4a4336;
+  border-color: #d6c1a3;
+  text-shadow: 0 0 5px rgba(214, 193, 163, 0.5);
+}

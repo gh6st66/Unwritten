@@ -7,6 +7,8 @@ import { Civilization } from "../civ/types";
 import { Lexeme } from "../types/lexeme";
 import { SceneObject as ParserSceneObject, Effect as ParserEffect } from '../systems/parser/types';
 import { Inventory } from '../systems/inventory';
+import { AccordState, FactionState, ID, MaskTag, NPCState } from "../accord/types";
+import { OmenWeights } from '../omen/types';
 
 export type { Lexeme, ParserEffect, Inventory };
 
@@ -25,7 +27,6 @@ export type Phase =
   | "OMEN"
   | "LOADING"
   | "SCENE"
-  | "RESOLVE"
   | "COLLAPSE"
   | "GENERATION_TESTER";
 
@@ -36,18 +37,6 @@ export enum ResourceId {
 }
 
 export type Resources = Record<ResourceId, number>;
-
-export type Effect = {
-  resource: ResourceId;
-  delta: number;
-};
-
-export type ActionOutcome = {
-  id: string;
-  label: string;
-  effects: Effect[];
-  grantsMarks?: Mark[];
-};
 
 export type Origin = {
   id: string;
@@ -74,6 +63,26 @@ export type Omen = {
   };
 };
 
+// FIX: Add missing Effect, ActionOutcome, and Encounter types.
+export type Effect = {
+  resource: ResourceId;
+  delta: number;
+};
+
+export type ActionOutcome = {
+  id: string;
+  label: string;
+  effects: Effect[];
+  grantsMarks?: Mark[];
+};
+
+export type Encounter = {
+  id: string;
+  prompt: string;
+  internalThoughtHint?: string;
+  options: ActionOutcome[];
+};
+
 export type Mark = {
   id: string;
   label: string;
@@ -92,21 +101,15 @@ export type Mask = {
 };
 
 export type Player = {
-  id: string;
+  id: ID;
   name: string;
+  maskTag: MaskTag;
   resources: Resources;
   marks: Mark[];
   mask: Mask | null;
   unlockedLexemes: string[]; // Lexeme IDs
   flags: Set<string>;
   inventory: Inventory;
-};
-
-export type Encounter = {
-  id: string;
-  prompt: string;
-  options: ActionOutcome[];
-  internalThoughtHint?: string;
 };
 
 export type WorldData = {
@@ -121,7 +124,7 @@ export type GameScreen =
   | { kind: "MASK_REVEAL"; mask: Mask }
   | { kind: "OMEN"; omen: Omen }
   | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' | 'SCENE' | 'ORIGIN_GEN' }
-  | { kind: "SCENE"; sceneId: string; description: string; objects: SceneObject[]; lastActionResponse: string | null; suggestedCommands: string[]; isHallucinating?: boolean; }
+  | { kind: "SCENE"; sceneId: string; description: string; objects: SceneObject[]; narrativeLog: string[]; suggestedCommands: string[]; isHallucinating?: boolean; }
   | { kind: "RESOLVE"; summary: string }
   | { kind: "COLLAPSE"; reason: string }
   | { kind: "GENERATION_TESTER" };
@@ -138,8 +141,6 @@ export type GameEvent =
   | { type: "LOAD_SCENE", sceneId: string }
   | { type: "ATTEMPT_ACTION", rawCommand: string }
   | { type: "GENERATION_FAILED"; error: string }
-  | { type: "CHOOSE_OPTION"; encounterId: string; optionId: string } // Kept for other event types
-  | { type: "ADVANCE"; to: Phase }
   | { type: "END_RUN"; reason: string }
   | { type: "LOAD_STATE"; snapshot: GameState }
   | { type: "RESET_GAME" }
@@ -157,6 +158,12 @@ export type GameState = {
   firstMaskLexeme: Lexeme | null;
   day: number;
   currentSceneId: string | null;
+  // Accord System State
+  npcs: Record<ID, NPCState>;
+  factions: Record<ID, FactionState>;
+  accord: AccordState;
+  // Omen System State
+  omenWeights: OmenWeights;
 };
 
 // Lexicon System Types

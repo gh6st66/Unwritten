@@ -36,6 +36,12 @@ export const LEXICON: Lexicon = {
     "attack": ["attack", "strike", "hit"],
     "rest": ["rest", "sleep", "wait"],
     "pray": ["pray", "chant", "invoke"],
+    "swear": ["swear", "pledge"],
+    "renounce": ["renounce", "forsake"],
+    "ally": ["ally with", "ally"],
+    "betray": ["betray", "turn on"],
+    "reveal": ["reveal", "show"],
+    "withhold": ["withhold", "hide"],
   },
   nouns: {
     "mask_blank": ["blank mask", "shell", "unformed mask"],
@@ -80,7 +86,7 @@ export const INTENTS: Intent[] = [
     intentType: "INTERNAL",
     verbs: ["inspect"],
     slots: ["object"],
-    effects: [{ type: "message" }], // Handled in state machine
+    effects: [{ type: "message" }],
     hints: ["inspect <object>", "look at <object>"]
   },
   {
@@ -91,12 +97,60 @@ export const INTENTS: Intent[] = [
     effects: [{ type: "move" }],
     hints: ["go north", "enter sanctum"]
   },
+  // Accord Intents
+  {
+    id: "OATH_SWEAR",
+    intentType: "SOCIAL",
+    verbs: ["swear"],
+    slots: ["object"],
+    effects: [],
+    hints: ["swear to the council"]
+  },
+  {
+    id: "OATH_RENOUNCE",
+    intentType: "SOCIAL",
+    verbs: ["renounce"],
+    slots: ["object"],
+    effects: [],
+    hints: ["renounce the council"]
+  },
+  {
+    id: "ALLY_DECLARE",
+    intentType: "SOCIAL",
+    verbs: ["ally"],
+    slots: ["object"],
+    effects: [],
+    hints: ["ally with the rebels"]
+  },
+  {
+    id: "BETRAY_ACT",
+    intentType: "SOCIAL",
+    verbs: ["betray"],
+    slots: ["object"],
+    effects: [],
+    hints: ["betray Elder Anah"]
+  },
+  {
+    id: "REVEAL_SECRET",
+    intentType: "SOCIAL",
+    verbs: ["reveal"],
+    slots: ["object"],
+    effects: [],
+  },
+  {
+    id: "WITHHOLD",
+    intentType: "SOCIAL",
+    verbs: ["withhold"],
+    slots: ["object"],
+    effects: [],
+  },
+  // Physical/Inventory Intents
   {
     id: "take",
     intentType: "PHYSICAL",
     verbs: ["take"],
     slots: ["object"],
-    effects: [], // Handled in state machine
+    effects: [],
     hints: ["take crucible"]
   },
   {
@@ -104,7 +158,7 @@ export const INTENTS: Intent[] = [
     intentType: "PHYSICAL",
     verbs: ["drop"],
     slots: ["object"],
-    effects: [], // Handled in state machine
+    effects: [],
     hints: ["drop crucible"]
   },
   {
@@ -112,7 +166,7 @@ export const INTENTS: Intent[] = [
     intentType: "INTERNAL",
     verbs: ["inventory"],
     slots: [],
-    effects: [], // Handled in state machine
+    effects: [],
     hints: ["inventory"]
   },
   {
@@ -120,7 +174,7 @@ export const INTENTS: Intent[] = [
     intentType: "PHYSICAL",
     verbs: ["open_close"],
     slots: ["object"],
-    effects: [], // Handled in state machine
+    effects: [],
     hints: ["open chest"]
   },
   {
@@ -128,7 +182,7 @@ export const INTENTS: Intent[] = [
     intentType: "PHYSICAL",
     verbs: ["unlock"],
     slots: ["object", "tool"],
-    effects: [], // Handled in state machine
+    effects: [],
     hints: ["unlock chest with key"]
   },
   {
@@ -140,30 +194,11 @@ export const INTENTS: Intent[] = [
     hints: ["use crucible on hearth"]
   },
   {
-    id: "forge_mask",
-    intentType: "PHYSICAL",
-    verbs: ["forge_mask"],
-    slots: ["object", "tool"],
-    requirements: {
-      location_tag: ["forge_site"]
-    },
-    effects: [{ type: "message", text: "You lack the spark to forge anything right now." }],
-    hints: ["forge mask with crucible"]
-  },
-  {
-    id: "talk_to",
-    intentType: "SOCIAL",
-    verbs: ["talk_to"],
-    slots: ["object"],
-    effects: [{ type: "message", text: "They do not respond. What would you ask them about?" }],
-    hints: ["talk to <person>", "ask <person> about <topic>"]
-  },
-  {
     id: "search",
     intentType: "INTERNAL",
     verbs: ["search"],
     slots: ["object"],
-    effects: [], // Handled in state machine
+    effects: [],
     hints: ["search hearth"],
   },
   {
@@ -171,7 +206,7 @@ export const INTENTS: Intent[] = [
     intentType: "INTERNAL",
     verbs: ["combine"],
     slots: ["object", "tool"],
-    effects: [], // Handled in state machine
+    effects: [],
     hints: ["combine ash with waterskin"],
   },
   {
@@ -179,7 +214,7 @@ export const INTENTS: Intent[] = [
     intentType: "PHYSICAL",
     verbs: ["destroy"],
     slots: ["object"],
-    effects: [], // Handled in state machine
+    effects: [],
     hints: ["break crucible"],
   },
   {

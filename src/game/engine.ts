@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { reduce, INITIAL } from "./stateMachine";
-import { GameEvent, GameState, Lexeme, Origin } from "./types";
-import { EncounterGenerator } from "../systems/EncounterGenerator";
+import { GameEvent, GameState } from "./types";
 import { MaskForger } from "../systems/MaskForger";
 import { generateWorld } from "../world/generateWorld";
 import { generateCivs } from "../civ/generateCivs";
@@ -31,7 +30,6 @@ export function useEngine() {
     }
   }, []);
 
-  const encounterGenerator = useMemo(() => new EncounterGenerator(), []);
   const maskForger = useMemo(() => new MaskForger(), []);
   const originGenerator = useMemo(() => new OmenGenerator(), []);
 
@@ -149,7 +147,7 @@ export function useEngine() {
         return;
     }
 
-  }, [state.phase, state.screen, state.runId, state.activeOmen, state.activeOrigin, state.firstMaskLexeme, encounterGenerator, maskForger, originGenerator]);
+  }, [state.phase, state.screen, state.runId, state.activeOmen, state.activeOrigin, state.firstMaskLexeme, maskForger, originGenerator]);
 
   const send = useCallback((ev: GameEvent) => dispatch(ev), []);
 

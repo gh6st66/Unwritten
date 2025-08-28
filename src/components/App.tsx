@@ -20,14 +20,6 @@ export default function App() {
   const onCommitFirstMask = (lexeme: Lexeme) => send({ type: 'COMMIT_FIRST_MASK', lexeme });
   const onContinueAfterReveal = () => send({ type: 'CONTINUE_AFTER_REVEAL' });
 
-  const onAdvance = (to: "SCENE" | "COLLAPSE") => {
-    if (to === "COLLAPSE") {
-      send({ type: "END_RUN", reason: "Manual end." });
-    } else {
-      send({ type: "ADVANCE", to });
-    }
-  };
-
   const onAcceptOmen = (omen: Omen, approach: 'embrace' | 'resist') => {
     if (state.phase === "OMEN") {
       send({ type: "ACCEPT_OMEN", omen, approach });
@@ -53,7 +45,7 @@ export default function App() {
           onOpenChronicle={() => setShowChronicle(true)}
           onOpenSettings={() => alert("Settings are not yet implemented.")}
           onOpenTester={() => send({ type: 'OPEN_TESTER' })}
-          version="0.2.1"
+          version="0.3.0"
         />
         {showGlossary && <GlossaryView categories={glossaryData} onClose={() => setShowGlossary(false)} />}
         {showChronicle && <ChronicleHome onClose={() => setShowChronicle(false)} />}
@@ -72,8 +64,7 @@ export default function App() {
       <ScreenRenderer
         screen={state.screen}
         player={state.player}
-        activeOrigin={state.activeOrigin}
-        onAdvance={onAdvance}
+        state={state}
         onAttemptAction={onAttemptAction}
         onStartRun={onStartRun}
         onCommitFirstMask={onCommitFirstMask}

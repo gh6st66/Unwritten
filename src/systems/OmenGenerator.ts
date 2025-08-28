@@ -4,7 +4,7 @@
 */
 import { GoogleGenAI, Type } from "@google/genai";
 import { Origin, ResourceId } from "../game/types";
-import { OMENS_DATA } from "../data/omens";
+import { OMENS_DATA } from "../data/claims";
 import { LEXEMES_DATA } from "../data/lexemes";
 import { LexemeTier } from "../types/lexeme";
 

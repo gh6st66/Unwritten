@@ -2,29 +2,24 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { GameEvent, GameState, Resources, Mark, Omen, Origin, ResourceId, ActionOutcome, Lexeme, SceneObject } from "./types";
-import { apply, canApply } from "../systems/resourceEngine";
+import { GameEvent, GameState, Resources, Mark, Omen, Origin, ResourceId, Lexeme, SceneObject, Player } from "./types";
 import { LEXEMES_DATA } from "../data/lexemes";
 import { LexemeTier } from "../types/lexeme";
 import { INTENTS, LEXICON, SCENES } from '../data/parser/content';
 import { ParserEngine } from '../systems/parser/engine';
-import { createInventory, addItem, removeItem } from '../systems/inventory';
-import { getItemRule } from '../data/itemCatalog';
+import { createInventory } from '../systems/inventory';
 import { recordEvent, getEvents } from '../systems/chronicle';
 import { getMarkDef } from "../systems/Marks";
-import { OMENS_DATA } from "../data/omens";
-import { INTERACTION_RULES } from "../data/interactions";
+import { OMENS_DATA } from "../data/claims";
+import { ChronicleEvent } from "../domain/events";
+import { handleIntent, applyDelta, selectVariant, selectAtmosphere } from "../accord/accord";
+import { IntentCtx } from "../accord/types";
+import { INITIAL_ACCORD, INITIAL_FACTIONS, INITIAL_NPCS } from "../data/accord/state";
+import { INITIAL_OMEN_WEIGHTS } from "../data/omen/initial";
 
 const STORAGE_KEY = "unwritten:v1";
 
-// Memoize the parser engine to avoid re-creating it on every action
 const parser = new ParserEngine(INTENTS, LEXICON);
-
-function createInitialInventory() {
-    let inv = createInventory();
-    const result = addItem(inv, 'waterskin', 1, getItemRule('waterskin'));
-    return result.inv;
-}
 
 export const INITIAL: GameState = {
   phase: "TITLE",
@@ -40,13 +35,18 @@ export const INITIAL: GameState = {
   player: {
     id: "p1",
     name: "The Unwritten",
+    maskTag: 'HERALD',
     resources: { [ResourceId.TIME]: 6, [ResourceId.CLARITY]: 3, [ResourceId.CURRENCY]: 0 },
     marks: [],
     mask: null,
     unlockedLexemes: LEXEMES_DATA.filter(l => l.tier === LexemeTier.Basic).map(l => l.id),
     flags: new Set(),
-    inventory: createInitialInventory(),
+    inventory: createInventory(),
   },
+  npcs: INITIAL_NPCS,
+  factions: INITIAL_FACTIONS,
+  accord: INITIAL_ACCORD,
+  omenWeights: INITIAL_OMEN_WEIGHTS,
   screen: { kind: "TITLE" },
   currentSceneId: null,
 };
@@ -60,7 +60,6 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     }
     case "CLOSE_TESTER": {
       if (state.phase !== "GENERATION_TESTER") return state;
-      // Reset to INITIAL to ensure a clean slate when returning to title
       return INITIAL;
     }
     case "REQUEST_NEW_RUN": {
@@ -78,9 +77,11 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       };
     }
     case "START_RUN": {
-      const initialPlayer = structuredClone(INITIAL.player);
+      const initialPlayer: Player = {
+        ...structuredClone(INITIAL.player),
+        maskTag: Math.random() > 0.5 ? 'HERALD' : 'TRICKSTER' // Randomize starting mask persona
+      };
       
-      // Apply origin modifiers
       if (ev.origin.resourceModifier) {
         for (const key in ev.origin.resourceModifier) {
           const resourceId = key as ResourceId;
@@ -91,17 +92,13 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     
       if (ev.origin.initialPlayerMarkId) {
         const markDef = getMarkDef(ev.origin.initialPlayerMarkId);
-        const newMark: Mark = {
-          id: markDef.id,
-          label: markDef.name,
-          value: 1,
-        };
+        const newMark: Mark = { id: markDef.id, label: markDef.name, value: 1 };
         initialPlayer.marks = mergeMarks(initialPlayer.marks, [newMark]);
       }
     
       return {
         ...INITIAL,
-        player: initialPlayer, // Use the modified player object
+        player: initialPlayer,
         phase: "WORLD_GEN",
         runId: crypto.randomUUID(),
         activeOrigin: ev.origin,
@@ -109,7 +106,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       };
     }
     case "WORLD_GENERATED": {
-      if (!state.activeOrigin) return state; // Should not happen
+      if (!state.activeOrigin) return state;
       return {
         ...state,
         phase: "FIRST_MASK_FORGE",
@@ -179,71 +176,13 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
         };
       }
       
-      let newObjects = structuredClone(sceneData.objects);
-      let newExits = structuredClone(sceneData.exits);
+      const newObjects = structuredClone(sceneData.objects);
+      const newExits = structuredClone(sceneData.exits);
       let sceneDescription = sceneData.description;
-      let initialMessage: string | null = null;
       const newFlags = new Set(state.player.flags);
-    
-      // --- ECHO SYSTEM V1 IMPLEMENTATION ---
-      const chronicleEvents = getEvents();
-      const pastEvents = chronicleEvents.filter(e => e.runId !== state.runId);
       
-      if (pastEvents.length > 0) {
-        let echoApplied = false;
-        
-        // Scene-specific echo checks
-        switch (ev.sceneId) {
-          case 'singing_hollow': {
-            const crystalShattered = pastEvents.some(e => e.type === 'OBJECT_DESTROYED' && e.objectId === 'resonant_crystal#1' && e.sceneId === 'singing_hollow');
-            if (crystalShattered) {
-                const rubbleObject: SceneObject = { id: 'echo_rubble#1', name: 'collapsed rubble', aliases: ['rubble', 'rocks', 'collapse'], salience: 0.9, inspect: 'A pile of shattered rock blocks the eastern tunnel. The air is still and silent here now.', tags: ['echo']};
-                newObjects = newObjects.filter(o => o.id !== 'resonant_crystal#1');
-                newObjects.push(rubbleObject);
-                delete newExits.e;
-                echoApplied = true;
-            }
-            break;
-          }
-          case 'shifting_ravine': {
-            const bridgeFell = pastEvents.some(e => e.type === 'BRIDGE_COLLAPSE' && e.sceneId === 'shifting_ravine');
-            if (bridgeFell) {
-                const skeletonObject: SceneObject = { id: 'echo_skeletons#1', name: 'skeletons', aliases: ['bones', 'remains'], salience: 0.7, inspect: 'The splintered remains of a rope bridge lie in the chasm below, tangled with the skeletons of those who fell.', tags: ['echo'] };
-                newObjects = newObjects.filter(o => o.id !== 'rope_bridge#1');
-                newObjects.push(skeletonObject);
-                delete newExits.n;
-                echoApplied = true;
-            }
-            break;
-          }
-          case 'forgotten_shrine': {
-            const idolStolen = pastEvents.some(e => e.type === 'IDOL_STOLEN' && e.sceneId === 'forgotten_shrine');
-            if (idolStolen) {
-              newObjects = newObjects.filter(o => o.id !== 'mossy_idol#1');
-              sceneDescription = "An empty altar sits in a quiet, overgrown grove. There is a palpable sense of loss here.";
-              echoApplied = true;
-            } else {
-              const spiritHonored = pastEvents.some(e => e.type === 'SPIRIT_HONORED' && e.sceneId === 'forgotten_shrine');
-              if (spiritHonored) {
-                  const idol = newObjects.find(o => o.id === 'mossy_idol#1');
-                  if (idol) {
-                      idol.inspect += " A faint, warm glow emanates from it, a sign of remembered piety.";
-                      idol.tags.push('blessed');
-                  }
-                  echoApplied = true;
-              }
-            }
-            break;
-          }
-        }
-        
-        const echoSeenFlag = `echo_seen_${ev.sceneId}`;
-        if (echoApplied && !state.player.flags.has(echoSeenFlag)) {
-            initialMessage = "A faint echo of a past event resonates here.";
-            newFlags.add(echoSeenFlag);
-        }
-      }
-
+      const narrativeLog = [sceneDescription, ...selectAtmosphere(ev.sceneId, state)];
+      
       SCENES[ev.sceneId].exits = newExits;
 
       return {
@@ -256,7 +195,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
           sceneId: ev.sceneId,
           description: sceneDescription,
           objects: newObjects,
-          lastActionResponse: initialMessage,
+          narrativeLog: narrativeLog,
           suggestedCommands: [],
         }
       };
@@ -264,80 +203,35 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     case "ATTEMPT_ACTION": {
       if (state.phase !== 'SCENE' || !state.currentSceneId || state.screen.kind !== 'SCENE') return state;
       
-      const stateForThisAction = { ...state, screen: { ...state.screen, isHallucinating: false } };
       const sceneData = SCENES[state.currentSceneId];
-      const result = parser.resolve(ev.rawCommand, sceneData, stateForThisAction.player);
+      const result = parser.resolve(ev.rawCommand, sceneData, state.player);
       
       if (!result.ok || !result.intent_id) {
-        return { ...stateForThisAction, screen: { ...stateForThisAction.screen, lastActionResponse: result.message ?? "Nothing happens.", suggestedCommands: result.suggested ?? [] } };
+        const currentScreen = state.screen;
+        return { ...state, screen: { ...currentScreen, narrativeLog: [...currentScreen.narrativeLog, result.message ?? "Nothing happens."], suggestedCommands: result.suggested ?? [] } };
       }
       
-      const intent = INTENTS.find(i => i.id === result.intent_id);
-      if (!intent) return stateForThisAction;
-
-      const interactionContext = {
-        state: stateForThisAction,
-        bindings: { ...result.bindings, intentId: intent.id },
-        sceneObjects: sceneData.objects,
-        reduce: reduce,
+      const intentCtx: IntentCtx = {
+          intentId: result.intent_id!,
+          actorId: state.player.id,
+          mask: state.player.maskTag,
+          sceneId: state.currentSceneId,
+          bindings: result.bindings ?? {}
       };
-
-      // Find the first matching rule (specific or generic) and execute it.
-      const matchedRule = INTERACTION_RULES.find(rule => rule.conditions(interactionContext));
+    
+      const delta = handleIntent(intentCtx, state);
+      let nextState = applyDelta(state, delta);
       
-      if (matchedRule) {
-        let nextState = matchedRule.effect(interactionContext);
-
-        // Handle move as a special case that requires a phase transition
-        const direction = result.bindings?.direction as string;
-        if (intent.id === 'move' && direction) {
-            if (state.currentSceneId === 'shifting_ravine' && direction === 'n') {
-                if (Math.random() < 0.5) { // 50% chance of failure
-                    recordEvent({ type: 'BRIDGE_COLLAPSE', runId: state.runId, sceneId: 'shifting_ravine' });
-                    return reduce(state, { type: 'END_RUN', reason: 'The rope bridge snapped, plunging you into the chasm.' });
-                }
-            }
-            if (state.currentSceneId === 'moonlit_garden' && direction === 'n') {
-                if (!state.player.flags.has('solved_garden_riddle')) {
-                    return { ...state, screen: { ...state.screen, lastActionResponse: "There is no path to the north." }};
-                }
-                 return reduce(state, { type: 'END_RUN', reason: 'You stepped onto the secret path, and your story ends here for now.' });
-            }
-            const nextSceneId = sceneData.exits[direction];
-            if (nextSceneId) {
-                const summary = `You move ${direction}...`;
-                return { ...state, phase: 'LOADING', screen: { kind: 'LOADING', message: summary, context: 'SCENE' }, currentSceneId: nextSceneId };
-            } else {
-                return { ...state, screen: { ...state.screen, lastActionResponse: "You can't go that way." } };
-            }
-        }
-        return nextState;
+      const currentScreen = nextState.screen.kind === 'SCENE' ? nextState.screen : null;
+      if (currentScreen) {
+        const line = selectVariant(delta.lineId ?? 'ACTION_DEFAULT', nextState);
+        return { ...nextState, screen: { ...currentScreen, narrativeLog: [...currentScreen.narrativeLog, `> ${ev.rawCommand}`, line] } };
       }
 
-      // Fallback if no interaction rule matches the resolved intent.
-      return { ...stateForThisAction, screen: { ...stateForThisAction.screen, lastActionResponse: "That doesn't seem to do anything here." }};
+      return nextState;
     }
     case "GENERATION_FAILED": {
         return { ...state, phase: "COLLAPSE", screen: { kind: "COLLAPSE", reason: `The world unravelled. (${ev.error})` } };
-    }
-    case "CHOOSE_OPTION": {
-      if (state.screen.kind !== "SCENE") return state;
-      const opt = {id: 'placeholder', label: 'placeholder', effects: []}; // This path is now for non-parser events.
-      if (!opt || !canApply(state.player.resources, opt as any)) return state;
-
-      const nextRes = apply(state.player.resources, opt as any);
-      const collapse = nextRes.TIME <= 0 ? "Out of time." : null;
-
-      return { ...state, player: { ...state.player, resources: nextRes }, phase: collapse ? "COLLAPSE" : "RESOLVE", screen: collapse ? { kind: "COLLAPSE", reason: collapse } : { kind: "RESOLVE", summary: `You chose ${opt.label}.` } };
-    }
-    case "ADVANCE": {
-      if (ev.to === "COLLAPSE") {
-        return { ...state, phase: "COLLAPSE", screen: { kind: "COLLAPSE", reason: "Ended by design." } };
-      }
-      if (state.phase === 'RESOLVE' && state.currentSceneId) {
-         return reduce(state, { type: 'LOAD_SCENE', sceneId: state.currentSceneId });
-      }
-      return state;
     }
     case "END_RUN": {
       if (state.player.resources.TIME <= 0) {
@@ -348,8 +242,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     case "LOAD_STATE": {
       const snapshot = ev.snapshot;
       const flags = Array.isArray(snapshot.player.flags) ? new Set(snapshot.player.flags as string[]) : new Set<string>();
-      const inventory = snapshot.player.inventory ? createInventory(snapshot.player.inventory) : createInventory();
-      return { ...snapshot, player: { ...snapshot.player, flags, inventory } };
+      return { ...snapshot, player: { ...snapshot.player, flags } };
     }
     case "RESET_GAME": {
       localStorage.removeItem(STORAGE_KEY);

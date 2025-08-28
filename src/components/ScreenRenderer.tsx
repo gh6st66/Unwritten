@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from "react";
-import { GameScreen, Omen, Origin, Lexeme, Player, SceneObject } from "../game/types";
-import { OriginSelectionView } from "./OriginSelectionView";
+import { GameState, GameScreen, Omen, Origin, Lexeme, Player, SceneObject } from "../game/types";
+import { OriginSelectionView } from "./SeedSelectionView";
 import { MaskRitual } from "../features/ritual/MaskRitual";
 import { FIRST_MASK_RITUAL_TEMPLATE } from '../data/rituals';
 import { LEXEMES_DATA } from '../data/lexemes';
@@ -13,15 +13,15 @@ import { MaskRevealView } from "./MaskRevealView";
 import GenerationTester from "./GenerationTester";
 import { ParserInput } from "./ParserInput";
 import '../styles/parser.css';
-import { OmenView } from "./OmenView";
+import '../styles/narrativeLog.css';
+import { OmenView } from "./ClaimView";
 import { PlayerStatus } from "./PlayerStatus";
 
 type Props = {
   screen: GameScreen;
   player: Player;
-  activeOrigin: Origin | null;
+  state: GameState;
   onAttemptAction: (command: string) => void;
-  onAdvance: (to: "SCENE" | "COLLAPSE") => void;
   onStartRun: (origin: Origin) => void;
   onCommitFirstMask: (lexeme: Lexeme) => void;
   onContinueAfterReveal: () => void;
@@ -69,9 +69,8 @@ export function ScreenRenderer(props: Props) {
   const { 
     screen, 
     player,
-    activeOrigin,
+    state,
     onAttemptAction,
-    onAdvance, 
     onStartRun, 
     onAcceptOmen, 
     onReset,
@@ -80,13 +79,11 @@ export function ScreenRenderer(props: Props) {
     onCloseTester,
   } = props;
 
-  const [isParsing, setIsParsing] = useState(false); // UI lock during action resolution
+  const [isParsing, setIsParsing] = useState(false);
 
   const handleParseSubmit = async (text: string) => {
     setIsParsing(true);
     onAttemptAction(text);
-    // In the new model, the state machine will handle the result and update the screen.
-    // We can probably remove the async nature and local parsing state here soon.
     setIsParsing(false);
   };
 
@@ -111,11 +108,10 @@ export function ScreenRenderer(props: Props) {
         player.unlockedLexemes.includes(lex.id) && lex.tier === LexemeTier.Basic
       );
 
-      const biasedLexemes = activeOrigin?.lexemeBias
-        ? allBasicLexemes.filter(lex => activeOrigin.lexemeBias!.includes(lex.id))
+      const biasedLexemes = state.activeOrigin?.lexemeBias
+        ? allBasicLexemes.filter(lex => state.activeOrigin!.lexemeBias!.includes(lex.id))
         : allBasicLexemes;
       
-      // Fallback in case the bias results in an empty list (e.g., bad data)
       const availableLexemes = biasedLexemes.length > 0 ? biasedLexemes : allBasicLexemes;
 
       return (
@@ -148,7 +144,9 @@ export function ScreenRenderer(props: Props) {
       }
       return (
         <div className={sceneWrapperClasses.join(' ')}>
-          <p>{screen.description}</p>
+          <div className="narrative-log">
+            {screen.narrativeLog.map((line, index) => <p key={index} className="narrative-log-entry">{line}</p>)}
+          </div>
 
           {screen.objects.length > 0 && (
             <div className="scene-objects-list">
@@ -164,13 +162,9 @@ export function ScreenRenderer(props: Props) {
             </div>
           )}
           
-          <PlayerStatus player={player} />
+          <PlayerStatus state={state} />
           
           <ParserInput onSubmit={handleParseSubmit} disabled={isParsing} />
-
-          <div className="parser-response-area" aria-live="polite">
-            {screen.lastActionResponse}
-          </div>
 
           {screen.suggestedCommands && screen.suggestedCommands.length > 0 && (
             <div className="suggestions-container">
@@ -190,16 +184,6 @@ export function ScreenRenderer(props: Props) {
         </div>
       );
     }
-    case "RESOLVE":
-      return (
-        <div className="p-4">
-          <p>{screen.summary}</p>
-          <button className="mt-4 px-4 py-2 rounded border"
-                  onClick={() => onAdvance("SCENE")}>
-            Continue
-          </button>
-        </div>
-      );
     case "COLLAPSE":
       return (
         <div className="p-4">
@@ -211,9 +195,10 @@ export function ScreenRenderer(props: Props) {
           </button>
         </div>
       );
-    // The LOADING/TITLE cases are handled by App.tsx and won't be passed here.
+    // The LOADING/TITLE/RESOLVE cases are handled by App.tsx or are obsolete and won't be passed here.
     case "LOADING":
     case "TITLE":
+    case "RESOLVE":
         return null;
   }
 }

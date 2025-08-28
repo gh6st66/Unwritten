@@ -19,7 +19,9 @@ export type ChronicleEventPayload =
   // New Echo Events
   | { type: "BRIDGE_COLLAPSE"; runId: string; sceneId: string; }
   | { type: "SPIRIT_HONORED"; runId: string; sceneId: string; }
-  | { type: "IDOL_STOLEN"; runId: string; sceneId: string; };
+  | { type: "IDOL_STOLEN"; runId: string; sceneId: string; }
+  // Ripples System
+  | { type: "MICRO_REACTION"; runId: string; tag: string; sceneId: string | null; direction?: string; objectId?: string; };
 
 // The full event type, with timestamp.
 // Using an intersection with a union distributes the intersection over the members of the union,

@@ -2,58 +2,69 @@
 
 ## Current Status (As of This Update)
 
-Development has successfully completed **Phase 2**, establishing a robust and extensible foundation for the game. The core technical architecture is feature-complete for the initial gameplay loop.
+Development has successfully established a robust and extensible foundation for the game. The core technical architecture for a deeply systemic, narrative-driven experience is now in place.
 
--   A clean, data-driven state engine manages all game logic.
--   A flexible natural language parser serves as the primary player interface.
--   AI-powered procedural generation for Masks (via Gemini API) is fully integrated.
--   The Chronicle system successfully records run history, and the Echo system now manifests that history as tangible changes in the world.
+-   A clean, data-driven state engine manages all game logic via declarative `EngineDelta` updates.
+-   The "Shattered Accord" system provides a powerful framework for micro-reactivity, tracking NPC recognition and world stability.
+-   The Conflict Beat scheduler allows for emergent, state-driven narrative events.
+-   A flexible natural language parser with a rich lexicon serves as the primary player interface.
+-   NPCs have a memory of interactions and can respond dynamically to player choices.
 
-The team's current focus is shifting to **Phase 3: Narrative & Character Systems**, where we will build upon this strong foundation to create a deeply reactive and compelling narrative experience.
+The team's current focus is shifting to **Phase 4: Narrative Deepening & Content**, where we will build upon this strong foundation to create a deeply reactive and compelling narrative experience.
 
 ---
 
 ## Phase 1: Core Systems & Parser Implementation (Complete)
 
-*Goal: Build the foundational technology for a narrative-first, parser-driven roguelike.*
+*Goal: Build the foundational technology for a narrative-first, parser-driven roguerike.*
 
 -   [x] **State Management:** Implemented a core engine to manage game flow (`TITLE`, `SCENE`, `COLLAPSE`).
 -   [x] **Text Parser:** Built a data-driven text parser that resolves natural language commands into game intents.
--   [x] **World Generation:** Developed a procedural world and civilization generation system.
--   [x] **AI Integration:** Integrated the Google Gemini API for the procedural mask forging system.
+-   [x] **AI Integration:** Integrated the Google Gemini API for procedural mask forging.
 -   [x] **Persistence:** Created the Chronicle system to record key events from each run.
+-   [x] **World Generation:** Developed a procedural world and civilization generation system.
 
 ---
 
-## Phase 2: Gameplay Loop & Content Expansion (Complete)
+## Phase 2: Shattered Accord & Micro-Reactivity (Complete)
 
-*Goal: Flesh out the initial gameplay loop to be fully interactive and expand the world's content.*
+*Goal: Implement the core systemic layer for world and character reactivity.*
 
--   [x] **Full Intent/Effect System:** The parser now supports a full range of effects (`create`, `destroy`, `combine`), handled by a clean, data-driven interaction system.
--   [x] **Player Inventory:** `take`, `drop`, and `inventory` intents are fully functional.
--   [x] **Stateful World Objects:** Objects in the world can now have their internal state permanently modified by player actions within a run.
--   [x] **Echo System (v1):** Significant choices recorded in the Chronicle now create tangible changes in subsequent runs (e.g., destroyed objects leave rubble, past failures leave remnants).
--   [x] **Content Pack 1:** Added 5+ new scenes and 10+ new core intents to expand player agency.
--   [x] **UI/UX Polish (v1):** Implemented a dedicated Player Status view for inventory and marks, and improved scene rendering to show dynamic object states.
-
----
-
-## Phase 3: Narrative & Character Systems (Current Focus)
-
-*Goal: Deepen the narrative experience with reactive characters and a central conflict that responds to player choice.*
-
--   [ ] **NPC Dialogue & Memory:** Implement the `ask_about` and `talk_to` intents. NPCs should have a basic memory of interactions and react to the player's visible Marks and the current world state.
--   [ ] **Journal & Omen System:** Fully integrate the `Omen` system into the gameplay loop. The player's actions should be measured against their chosen `embrace` or `resist` path, leading to meaningful narrative consequences.
--   [ ] **Mask Mechanics:** Evolve masks from narrative items into mechanically significant artifacts that can unlock new commands or change NPC reactions.
--   [ ] **Echo System (v2):** Expand the system to include more dynamic Echoes, such as NPCs who remember past interactions or altered environmental descriptions based on the previous run's outcome.
+-   [x] **Accord Engine:** Built the core engine for processing intents and applying declarative `EngineDelta` updates to game state.
+-   [x] **Systemic Intents:** Integrated new social verbs (`swear`, `renounce`, `ally`, `betray`) into the parser and engine.
+-   [x] **NPC Recognition:** NPCs now track `trust` and `fear` based on player actions and mask choice.
+-   [x] **Variant Text System:** The UI now uses a data-driven system to select narrative text based on the current game state (Accord, NPC recognition).
+-   [x] **UI Refactor:** Replaced the legacy encounter UI with a parser-driven narrative log.
 
 ---
 
-## Phase 4: Polish & Onboarding
+## Phase 3: Dynamic World Systems (Complete)
+
+*Goal: Add advanced systems for emergent narrative structure and character interaction.*
+
+-   [x] **NPC Dialogue & Memory:** Implemented the `ask_about` and `talk_to` intents. NPCs now have a basic memory of interactions within a run.
+-   [x] **Conflict Beat System:** Implemented a robust, data-driven scheduler for triggering major narrative events (Beats) based on world state, player location, and time.
+-   [x] **Effect Router:** Created a pure, data-driven system for resolving the consequences of Beats, such as pushing rumors or creating Echoes.
+-   [x] **Echo System (v1):** The `markEcho` effect is fully integrated, allowing key events to be recorded in the Chronicle for persistence across runs.
+
+---
+
+## Phase 4: Narrative Deepening & Content (Current Focus)
+
+*Goal: Leverage the completed systems to build a richer, more compelling player experience.*
+
+-   [ ] **Journal & Omen System:** Expand the Omen system to track the player's `embrace` or `resist` path throughout a run, influencing which Conflict Beats are scheduled and how NPCs react.
+-   [ ] **Mask Mechanics:** Evolve masks from narrative items into mechanically significant artifacts. Wearing a specific mask could unlock new commands, alter dialogue options, or be required to resolve certain Beats.
+-   [ ] **Echo System (v2):** Implement the bootstrap phase where Echoes from the Chronicle create tangible changes in the next run (e.g., altered scenes, modified NPC dispositions, new factions).
+-   [ ] **Content Pack 2:** Author a new suite of Conflict Beats, add more NPCs with detailed dialogue trees, and expand the variant text library to increase reactivity.
+
+---
+
+## Phase 5: Polish & Onboarding
 
 *Goal: Refine the user experience, improve player guidance, and prepare for a polished vertical slice.*
 
 -   [ ] **Lexicon Expansion:** Continue to expand the lexicon with hundreds of new synonyms to improve the parser's natural language understanding.
--   [ ] **Performance & Accessibility:** Ensure the application is performant and adheres to accessibility standards.
+-   [ ] **UI/UX Polish:** Implement the `RumorTicker` UI and improve visual feedback for how the Accord, Beats, and Echoes are affecting the world.
 -   [ ] **Sound Design:** Implement ambient soundscapes for scenes and satisfying UI sound effects for actions.
 -   [ ] **Onboarding/Tutorial:** Create a dedicated starting scene that gracefully introduces new players to the text parser and core game concepts.

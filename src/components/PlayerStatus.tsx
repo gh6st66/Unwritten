@@ -3,19 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { Player } from '../game/types';
+import { GameState } from '../game/types';
 import { getItemRule } from '../data/itemCatalog';
+import { OmenForecast } from './OmenForecast';
 import '../styles/playerStatus.css';
 
 interface Props {
-  player: Player;
+  state: GameState;
 }
 
-export const PlayerStatus: React.FC<Props> = ({ player }) => {
+export const PlayerStatus: React.FC<Props> = ({ state }) => {
+  const { player } = state;
   const { inventory, marks } = player;
 
   return (
     <div className="player-status-container">
+      <OmenForecast state={state} />
       <div className="status-section">
         <h3 className="status-header">Inventory</h3>
         {inventory.slots.length > 0 ? (

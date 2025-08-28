@@ -1,0 +1,34 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+.narrative-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.narrative-log-entry {
+  line-height: 1.6;
+  color: var(--primary-text-color);
+  animation: log-entry-fade-in 0.5s ease-out;
+}
+
+/* Style player input differently from game responses */
+.narrative-log-entry:has-text(>) {
+  color: var(--secondary-text-color);
+  font-style: italic;
+}
+
+@keyframes log-entry-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
