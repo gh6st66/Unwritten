@@ -6,7 +6,7 @@ import { World } from '../world/types';
 import { Rng, makeRNG } from '../world/rng';
 import { Civilization, Faction, NPC, Disposition } from './types';
 import { DialectId } from '../systems/dialect/types';
-import DIALECTS_DATA from '../data/dialects.json';
+import DIALECTS_DATA from '@/data/dialects.json';
 
 const FIRST_NAMES = ["Anya", "Bram", "Cora", "Darian", "Elara", "Finn", "Gwen", "Hale"];
 const LAST_NAMES = ["Stonehand", "Swiftwater", "Blackwood", "Ironhide", "Silvermane"];

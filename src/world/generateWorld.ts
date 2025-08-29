@@ -5,7 +5,7 @@
 import { World, WorldGenConfig, GeoCell, Region } from './types';
 import { makeRNG } from './rng';
 import { DialectId } from '../systems/dialect/types';
-import DIALECTS_DATA from '../data/dialects.json';
+import DIALECTS_DATA from '@/data/dialects.json';
 
 
 // NOTE: This is a simplified stub implementation of the design document.
