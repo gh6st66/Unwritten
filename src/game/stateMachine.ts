@@ -54,6 +54,8 @@ export const INITIAL: GameState = {
   omenWeights: INITIAL_OMEN_WEIGHTS,
   screen: { kind: "TITLE" },
   currentSceneId: null,
+  rumors: [],
+  lastEchoTimestamp: 0,
 };
 
 
@@ -223,12 +225,71 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       
       const sceneData = SCENES[state.currentSceneId];
       const result = parser.resolve(ev.rawCommand, sceneData, state.player);
-      
+      const currentScreen = state.screen;
+
       if (!result.ok || !result.intent_id) {
-        const currentScreen = state.screen;
         return { ...state, screen: { ...currentScreen, narrativeLog: [...currentScreen.narrativeLog, `> ${ev.rawCommand}`, result.message ?? "Nothing happens."], suggestedCommands: result.suggested ?? [] } };
       }
       
+      // Handle special informational intents before the Accord system
+      if (result.intent_id === 'CONSULT_SYSTEM') {
+        const objectId = result.bindings?.object;
+        let newLogEntries: string[] = [];
+
+        switch (objectId) {
+          case 'rumors': {
+            const recentRumors = state.rumors.slice(-3).map(r => `- "${r.text}"`);
+            newLogEntries = recentRumors.length > 0
+              ? ["You recall recent whispers...", ...recentRumors]
+              : ["You listen for rumors, but hear nothing of note."];
+            break;
+          }
+          case 'accord': {
+            const { stability, thresholds } = state.accord;
+            let accordText = "The World Accord is stable.";
+            if (stability > thresholds.unity) accordText = "The Accord feels strong, a sense of unity is palpable.";
+            else if (stability < thresholds.fracture) accordText = "The Accord is frayed, on the verge of fracturing.";
+            else if (stability > thresholds.unity * 0.7) accordText = "A sense of purpose seems to lighten the air.";
+            else if (stability < thresholds.fracture * 0.7) accordText = "The air feels heavy with unspoken tension.";
+            newLogEntries = [accordText];
+            break;
+          }
+          case 'beat': {
+             const beatText = state.accord.scheduledBeats.length > 0 
+                ? "The world feels taut, as if something is about to break."
+                : "The threads of fate are calm for now.";
+            newLogEntries = [beatText];
+            break;
+          }
+          case 'chronicle': {
+            const chronicleData = getChronicleData();
+            const lastRun = Object.values(chronicleData.runs).filter(r => r.endTs).sort((a, b) => b.startTs - a.startTs)[0];
+            const summary = lastRun ? generateSummary(lastRun, chronicleData.events) : ["No previous run has been recorded."];
+            const bias = calculateBias(chronicleData.events);
+            const biasLines = Object.entries(bias.factionStanceDeltas).map(([key, value]) => {
+              const [faction, mask] = key.split(':');
+              const effect = (value as number) > 0 ? "favorable" : "unfavorable";
+              return `The world's stance towards the ${mask} is currently ${effect} regarding the ${faction}.`;
+            });
+
+            newLogEntries.push("--- From the Chronicle ---", ...summary);
+            if(biasLines.length > 0) newLogEntries.push(...biasLines);
+            else newLogEntries.push("The world feels no strong echoes from your past.");
+            break;
+          }
+          default:
+            newLogEntries = ["You ponder, but find no answers."];
+        }
+        
+        return {
+          ...state,
+          screen: {
+            ...currentScreen,
+            narrativeLog: [...currentScreen.narrativeLog, `> ${ev.rawCommand}`, ...newLogEntries]
+          }
+        };
+      }
+
       const intentCtx: IntentCtx = {
           intentId: result.intent_id!,
           actorId: state.player.id,
@@ -248,10 +309,10 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
 
       recordEvent({type: 'ACCORD_DELTA_APPLIED', runId: state.runId, sceneId: state.currentSceneId, intentId: intentCtx.intentId, delta });
       
-      const currentScreen = nextState.screen.kind === 'SCENE' ? nextState.screen : null;
-      if (currentScreen) {
+      const nextCurrentScreen = nextState.screen.kind === 'SCENE' ? nextState.screen : null;
+      if (nextCurrentScreen) {
         const line = selectVariant(delta.lineId ?? 'ACTION_DEFAULT', nextState);
-        return { ...nextState, screen: { ...currentScreen, narrativeLog: [...currentScreen.narrativeLog, `> ${ev.rawCommand}`, line] } };
+        return { ...nextState, screen: { ...nextCurrentScreen, narrativeLog: [...nextCurrentScreen.narrativeLog, `> ${ev.rawCommand}`, line] } };
       }
 
       return nextState;

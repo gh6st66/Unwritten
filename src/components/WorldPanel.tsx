@@ -24,8 +24,15 @@ export const WorldPanel: React.FC<Props> = ({ state }) => {
     );
   }
 
-  const pressure = state.accord.stability;
-  const pressurePercent = ((pressure + 100) / 200) * 100;
+  const { stability, thresholds } = state.accord;
+  const pressurePercent = ((stability + 100) / 200) * 100;
+
+  const isNearThreshold = stability > thresholds.unity * 0.8 || stability < thresholds.fracture * 0.8;
+  const pressureBarContainerClasses = ["pressure-bar-container"];
+  if (isNearThreshold) {
+      pressureBarContainerClasses.push("pulsing");
+  }
+
 
   return (
     <div className="world-panel">
@@ -38,7 +45,7 @@ export const WorldPanel: React.FC<Props> = ({ state }) => {
       </div>
       <div className="pressure-info">
         <h3 className="panel-header">World Accord</h3>
-        <div className="pressure-bar-container" title={`Stability: ${pressure}`}>
+        <div className={pressureBarContainerClasses.join(' ')} title={`Stability: ${stability}`}>
           <div className="pressure-bar" style={{ width: `${pressurePercent}%` }}></div>
         </div>
       </div>

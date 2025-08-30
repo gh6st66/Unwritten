@@ -90,3 +90,15 @@
   font-style: italic;
   color: var(--secondary-text-color);
 }
+
+/* New styles for icon */
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.echo-icon {
+  opacity: 0.6;
+  vertical-align: middle;
+}

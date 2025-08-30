@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useEngine } from "../game/engine";
 import { GameState, Omen, Origin, ResourceId, Lexeme } from "../game/types";
-import { GlossaryView } from "./GlossaryView";
+import { GlossaryView } from "./GlossView";
 import { glossaryData } from "../data/glossary";
 import { LoadingScreen } from "./LoadingScreen";
 import TitleScreen from "./TitleScreen";
@@ -10,32 +10,103 @@ import { Game } from "./Game";
 import { GameStatusOverlay } from "./GameStatusOverlay";
 import { InGameChronicle } from "./InGameChronicle";
 import CollapseModal from "./CollapseModal";
+import { RumorTicker } from "./RumorTicker";
+import { AudioManager } from "../systems/audio/AudioManager";
+import { getChronicleData } from "../systems/chronicle";
 
 export default function App() {
   const { state, send, canContinue, loadGame } = useEngine();
   const [showGlossary, setShowGlossary] = useState(false);
   const [showChronicle, setShowChronicle] = useState(false);
   const [showInGameChronicle, setShowInGameChronicle] = useState(false);
+  const [isEchoing, setIsEchoing] = useState(false);
+  
+  const audioManager = useMemo(() => new AudioManager(), []);
+  const prevStateRef = useRef<GameState>();
+
+  // Main audio controller effect
+  useEffect(() => {
+    const prevState = prevStateRef.current;
+    if (prevState) {
+      // --- Trigger one-shot UI sounds based on state changes ---
+      const currentScreen = state.screen;
+      const prevScreen = prevState.screen;
+
+      // 1. Parser success/failure
+      if (currentScreen.kind === 'SCENE' && prevScreen.kind === 'SCENE' && currentScreen.narrativeLog.length > prevScreen.narrativeLog.length) {
+        const lastEntry = currentScreen.narrativeLog[currentScreen.narrativeLog.length - 1];
+        const isFailureMessage = [
+          "I don't know how to", "Nothing happens.", "You can't do that here.", 
+          "That doesn't make sense.", "You don't see any", "You are not carrying"
+        ].some(failMsg => lastEntry.startsWith(failMsg));
+
+        if (isFailureMessage) {
+          audioManager.playUI('parser_fail');
+        } else {
+          audioManager.playUI('parser_success');
+        }
+      }
+
+      // 2. Resource/Mark/Echo changes
+      if (state.player.marks.length > prevState.player.marks.length) {
+        audioManager.playUI('mark_gain');
+      }
+      if (state.player.resources[ResourceId.CLARITY] < prevState.player.resources[ResourceId.CLARITY]) {
+        audioManager.playUI('clarity_loss');
+      }
+      if (state.lastEchoTimestamp > prevState.lastEchoTimestamp) {
+        audioManager.playUI('echo_created');
+      }
+    }
+
+    // --- Update persistent ambient sounds ---
+    if (state.phase === 'SCENE' && state.currentSceneId) {
+      const scene = SCENES[state.currentSceneId];
+      // FIX: Add a guard to ensure the scene exists in the local SCENES constant before accessing its properties.
+      if (scene) {
+        audioManager.setAmbient(scene.tags || [], state.accord.stability);
+      }
+    } else {
+      audioManager.stop('ambient1');
+      audioManager.stop('ambient2');
+      audioManager.stop('drone');
+    }
+    
+    // --- Update Echo layer on new run ---
+    // FIX: The phase 'WORLD_GENERATED' does not exist. The correct phase to check for after world generation is 'FIRST_MASK_FORGE'.
+    if (state.phase === 'FIRST_MASK_FORGE' && prevState?.phase !== 'FIRST_MASK_FORGE') {
+        const chronicle = getChronicleData();
+        const echoEvents = chronicle.events.filter(e => e.type === 'ACCORD_DELTA_APPLIED').map(e => (e as any).intentId);
+        audioManager.setEchoLayer(echoEvents);
+    }
+
+
+    prevStateRef.current = state;
+  }, [state, audioManager]);
+
+
+  useEffect(() => {
+    if (state.lastEchoTimestamp > 0) {
+        const now = Date.now();
+        if (now - state.lastEchoTimestamp < 100) {
+            setIsEchoing(true);
+            const timer = setTimeout(() => setIsEchoing(false), 1500);
+            return () => clearTimeout(timer);
+        }
+    }
+  }, [state.lastEchoTimestamp]);
+
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Prevent shortcuts from firing when typing in an input field
       const target = event.target as HTMLElement;
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) {
         return;
       }
-
-      if (event.key.toLowerCase() === 'g') {
-        setShowGlossary(g => !g);
-      }
+      if (event.key.toLowerCase() === 'g') setShowGlossary(g => !g);
       if (event.key.toLowerCase() === 'c') {
          state.phase === 'TITLE' ? setShowChronicle(c => !c) : setShowInGameChronicle(c => !c);
       }
-       if (event.key.toLowerCase() === 'h') {
-        if (state.phase === 'SCENE') {
-            setShowInGameChronicle(c => !c);
-        }
-    }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -79,7 +150,7 @@ export default function App() {
   const collapseScreen = state.phase === 'COLLAPSE' && state.screen.kind === 'COLLAPSE' ? state.screen : null;
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isEchoing ? 'echo-ripple' : ''}`}>
       <Header state={state} />
       <Game
         state={state}
@@ -90,13 +161,17 @@ export default function App() {
         onAttemptAction={onAttemptAction}
         onReset={onReset}
         onCloseTester={() => send({ type: 'CLOSE_TESTER' })}
+        audioManager={audioManager}
       />
-      <Footer onGlossaryOpen={() => setShowGlossary(true)} onChronicleOpen={() => state.phase === 'SCENE' ? setShowInGameChronicle(true) : setShowChronicle(true)} />
+      <Footer 
+        onGlossaryOpen={() => setShowGlossary(true)} 
+        onChronicleOpen={() => state.phase === 'SCENE' ? setShowInGameChronicle(true) : setShowChronicle(true)}
+        rumors={state.rumors}
+      />
       {showGlossary && <GlossaryView categories={glossaryData} onClose={() => setShowGlossary(false)} />}
       {showChronicle && <ChronicleHome onClose={() => setShowChronicle(false)} />}
       {showInGameChronicle && <InGameChronicle onClose={() => setShowInGameChronicle(false)} />}
       <GameStatusOverlay state={state} onToggleChronicle={() => state.phase === 'SCENE' ? setShowInGameChronicle(c => !c) : setShowChronicle(c => !c)} onToggleGlossary={() => setShowGlossary(g => !g)} />
-      {/* FIX: Use the narrowed 'collapseScreen' variable to safely access props and fix type errors. */}
       <CollapseModal 
         open={!!collapseScreen}
         reason={collapseScreen ? collapseScreen.reason : 'choice'}
@@ -106,6 +181,19 @@ export default function App() {
     </div>
   );
 }
+
+// Dummy SCENES for audio context lookup
+const SCENES: Record<string, { tags?: string[] }> = {
+  "mountain_forge": { "tags": ["forge_site", "cavern"] },
+  "ridge_path": { "tags": ["outdoors"] },
+  "sanctum": { "tags": ["ruin", "sacred"] },
+  "singing_hollow": { "tags": ["cavern", "sacred"] },
+  "shifting_ravine": { "tags": ["outdoors", "dangerous"] },
+  "forgotten_shrine": { "tags": ["sacred", "ruin"] },
+  "stormbreak_plateau": { "tags": ["outdoors", "mountain", "dangerous"] },
+  "moonlit_garden": { "tags": ["sacred"] }
+};
+
 
 function Header({ state }: { state: GameState }) {
   const r = state.player.resources;
@@ -130,11 +218,11 @@ function Header({ state }: { state: GameState }) {
   );
 }
 
-function Footer({ onGlossaryOpen, onChronicleOpen }: { onGlossaryOpen: () => void; onChronicleOpen: () => void; }) {
+function Footer({ onGlossaryOpen, onChronicleOpen, rumors }: { onGlossaryOpen: () => void; onChronicleOpen: () => void; rumors: {text: string, id: string}[] }) {
   return (
     <div className="p-3 text-xs opacity-70 border-t flex justify-between items-center">
-      <span>Unwritten • History (h)</span>
-      <div style={{display: 'flex', gap: '1rem'}}>
+      <RumorTicker rumors={rumors} />
+      <div style={{display: 'flex', gap: '1rem', flexShrink: 0, paddingLeft: '1rem'}}>
         <button className="glossary-toggle" onClick={onChronicleOpen}>
           Chronicle (c)
         </button>

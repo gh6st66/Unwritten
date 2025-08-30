@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import type { Player } from '../../game/types';
-import { buildAliasMap, normalize } from './normalize';
+import { normalize } from './normalize';
 import { parse } from './parse';
 import { resolve as resolveIntent } from './resolve';
 import type { Intent, Lexicon, ResolveResult, SceneIndex } from './types';
+import { ROOT_TO_CANONICAL_VERB, THESAURUS } from '../../data/parser/content';
 
 /**
  * The main engine for parsing and resolving player commands.
@@ -17,11 +18,30 @@ export class ParserEngine {
   private lexicon: Lexicon;
   private aliasMap: Map<string, string>;
 
-  constructor(intents: Intent[], lexicon: Lexicon) {
-    this.intents = intents;
+  constructor(intents: Omit<Intent, 'root'>[], lexicon: Lexicon) {
+    this.intents = intents.map(i => ({...i, root: i.id }));
     this.lexicon = lexicon;
+    
     // Pre-build the alias map for faster normalization.
-    this.aliasMap = buildAliasMap(lexicon);
+    const aliasMap = new Map<string, string>();
+    // Nouns
+    for (const [canon, aliases] of Object.entries(lexicon.nouns)) {
+        for (const alias of aliases) {
+            if (alias.includes(" ")) {
+                aliasMap.set(alias, canon);
+            }
+        }
+    }
+    // Verbs from the new thesaurus
+    for (const [synonym, root] of Object.entries(THESAURUS)) {
+        if (synonym.includes(" ")) {
+            const canonicalVerb = ROOT_TO_CANONICAL_VERB[root];
+            if (canonicalVerb) {
+                aliasMap.set(synonym, canonicalVerb);
+            }
+        }
+    }
+    this.aliasMap = aliasMap;
   }
 
   /**

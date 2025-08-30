@@ -8,6 +8,13 @@ interface Props {
   onClose: () => void;
 }
 
+const EchoIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" className="echo-icon" aria-hidden="true">
+        <path d="M8 16a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM8 14a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0-2a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/>
+    </svg>
+);
+
+
 export const InGameChronicle: React.FC<Props> = ({ onClose }) => {
   const chronicleData = useMemo(() => getChronicleData(), []);
 
@@ -42,7 +49,9 @@ export const InGameChronicle: React.FC<Props> = ({ onClose }) => {
             </div>
           </section>
           <section>
-            <h3 className="panel-header">Active Echoes</h3>
+            <h3 className="panel-header" title="Echoes are persistent effects from past runs">
+                Active Echoes <EchoIcon />
+            </h3>
             <p className="bias-description">Your past actions have left an imprint on this world, creating the following biases:</p>
             {Object.keys(bias.factionStanceDeltas).length > 0 ? (
                 <ul className="bias-list">

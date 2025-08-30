@@ -131,6 +131,23 @@ button:disabled {
   animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
+/* Echo Ripple Effect */
+@keyframes echo-ripple-effect {
+  0% {
+    box-shadow: 0 0 0 0 rgba(154, 208, 255, 0.4), 0 4px 20px rgba(0,0,0,0.3);
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgba(154, 208, 255, 0), 0 4px 20px rgba(0,0,0,0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(154, 208, 255, 0), 0 4px 20px rgba(0,0,0,0.3);
+  }
+}
+
+.app-container.echo-ripple {
+  animation: echo-ripple-effect 1.5s ease-out;
+}
+
 
 /* Encounter Option Buttons */
 .option-button {

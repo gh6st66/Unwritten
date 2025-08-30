@@ -23,8 +23,9 @@ export type FailReason =
 
 export interface Intent {
   id: string;
+  root: string;
   intentType: IntentType;
-  verbs: string[]; // canonical + synonyms
+  verbs?: string[]; // canonical + synonyms
   slots: SlotName[];
   requirements?: {
     location_tag?: string[];

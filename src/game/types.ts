@@ -165,6 +165,9 @@ export type GameState = {
   accord: AccordState;
   // Omen System State
   omenWeights: OmenWeights;
+  // UI/UX State
+  rumors: { text: string; id: string }[];
+  lastEchoTimestamp: number;
 };
 
 // Lexicon System Types

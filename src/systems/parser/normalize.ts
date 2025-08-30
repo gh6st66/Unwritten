@@ -24,21 +24,3 @@ export function normalize(raw: string, aliasMap: Map<string, string>): string {
   }
   return s;
 }
-
-/**
- * Builds the alias map from the lexicon for use in normalization.
- * @param lexicon The game's lexicon data.
- * @returns A Map for quick lookups.
- */
-export function buildAliasMap(lexicon: { nouns: Record<string, string[]> }): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const [canon, aliases] of Object.entries(lexicon.nouns)) {
-    for (const alias of aliases) {
-      // Only map multi-word aliases that need to be collapsed.
-      if (alias.includes(" ")) {
-        map.set(alias, canon);
-      }
-    }
-  }
-  return map;
-}

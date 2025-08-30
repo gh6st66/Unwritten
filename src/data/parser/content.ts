@@ -11,38 +11,83 @@ interface SceneIndex extends Omit<ParserSceneIndex, 'objects'> {
     objects: SceneObject[];
 }
 
+/**
+ * NOTE: The following lexicon structures are based on the "Lexicon Expansion Spec".
+ * For simplicity within this environment, they are consolidated into this single file
+ * instead of being split into multiple JSON files with a build pipeline.
+ */
+
+// A map of semantic root actions. All synonyms will resolve to one of these roots.
+export const LEXICON_ROOTS = {
+  LOOK: { id: 'LOOK' }, TAKE: { id: 'TAKE' }, MOVE: { id: 'MOVE' }, DROP: { id: 'DROP' },
+  USE: { id: 'USE' }, OPEN: { id: 'OPEN' }, CLOSE: { id: 'CLOSE' }, UNLOCK: { id: 'UNLOCK' }, INVENTORY: { id: 'INVENTORY' },
+  SEARCH: { id: 'SEARCH' }, COMBINE: { id: 'COMBINE' }, DESTROY: { id: 'DESTROY' }, ASK: { id: 'ASK' },
+  TALK: { id: 'TALK' }, SAY: { id: 'SAY' }, EAT: { id: 'EAT' }, LISTEN: { id: 'LISTEN' },
+  PUSH: { id: 'PUSH' }, PULL: { id: 'PULL' }, GIVE: { id: 'GIVE' }, ATTACK: { id: 'ATTACK' },
+  REST: { id: 'REST' }, PRAY: { id: 'PRAY' }, SWEAR: { id: 'SWEAR' }, RENOUNCE: { id: 'RENOUNCE' },
+  ALLY: { id: 'ALLY' }, BETRAY: { id: 'BETRAY' }, REVEAL: { id: 'REVEAL' }, WITHHOLD: { id: 'WITHHOLD' },
+  EXIT: { id: 'EXIT' }, CONSULT_SYSTEM: { id: 'CONSULT_SYSTEM' },
+};
+
+// Maps a root action ID to a single, canonical verb. Used for normalizing multi-word commands.
+export const ROOT_TO_CANONICAL_VERB: Record<string, string> = {
+  LOOK: 'look', TAKE: 'take', MOVE: 'go', DROP: 'drop', USE: 'use', OPEN: 'open', CLOSE: 'close',
+  UNLOCK: 'unlock', INVENTORY: 'inventory', SEARCH: 'search', COMBINE: 'combine', EXIT: 'leave',
+  DESTROY: 'break', ASK: 'ask', TALK: 'talk', SAY: 'tell', EAT: 'eat', LISTEN: 'listen',
+  PUSH: 'push', PULL: 'pull', GIVE: 'give', ATTACK: 'attack', REST: 'rest', PRAY: 'pray',
+  SWEAR: 'swear', RENOUNCE: 'defy', ALLY: 'ally', BETRAY: 'betray', REVEAL: 'reveal', WITHHOLD: 'hide',
+  CONSULT_SYSTEM: 'consult',
+};
+
+// The main thesaurus mapping synonyms (lemmas) to their root action ID.
+export const THESAURUS: Record<string, string> = {
+  'look': 'LOOK', 'examine': 'LOOK', 'inspect': 'LOOK', 'observe': 'LOOK', 'study': 'LOOK', 'survey': 'LOOK', 'scan': 'LOOK', 'glance': 'LOOK', 'peer': 'LOOK', 'behold': 'LOOK', 'regard': 'LOOK', 'take a look': 'LOOK', 'cast eyes': 'LOOK', 'eye': 'LOOK',
+  // FIX: Removed duplicate key 'bag' which also exists for INVENTORY.
+  'take': 'TAKE', 'grab': 'TAKE', 'seize': 'TAKE', 'snatch': 'TAKE', 'pick up': 'TAKE', 'collect': 'TAKE', 'claim': 'TAKE', 'appropriate': 'TAKE', 'lift': 'TAKE', 'pocket': 'TAKE', 'acquire': 'TAKE', 'obtain': 'TAKE',
+  'drop': 'DROP', 'discard': 'DROP', 'let go': 'DROP', 'release': 'DROP', 'ditch': 'DROP', 'jettison': 'DROP', 'shed': 'DROP', 'deposit': 'DROP', 'set down': 'DROP', 'throw away': 'DROP', 'cast off': 'DROP',
+  'give': 'GIVE', 'offer': 'GIVE', 'hand': 'GIVE', 'present': 'GIVE', 'bestow': 'GIVE', 'grant': 'GIVE', 'deliver': 'GIVE', 'pass': 'GIVE', 'confer': 'GIVE', 'yield': 'GIVE', 'extend': 'GIVE',
+  // FIX: Removed duplicate key 'petition' which also exists for PRAY.
+  'speak': 'TALK', 'talk': 'TALK', 'address': 'TALK', 'utter': 'TALK', 'confer with': 'TALK', 'parley': 'TALK', 'beseech': 'TALK', 'declare': 'SAY', 'pronounce': 'SAY', 'hail': 'TALK', 'call to': 'TALK', 'converse': 'TALK',
+  // FIX: Removed duplicate keys 'press', 'probe', and 'implore' which also exist for PUSH, SEARCH, and PRAY respectively.
+  'ask': 'ASK', 'inquire': 'ASK', 'query': 'ASK', 'question': 'ASK', 'interrogate': 'ASK', 'seek': 'ASK', 'request': 'ASK',
+  // FIX: Removed duplicate key 'divulge' which also exists for REVEAL.
+  'tell': 'SAY', 'say to': 'SAY', 'inform': 'SAY', 'apprise': 'SAY', 'relate': 'SAY', 'recount': 'SAY', 'narrate': 'SAY', 'report': 'SAY', 'announce': 'SAY', 'say': 'SAY',
+  'listen': 'LISTEN', 'heed': 'LISTEN', 'harken': 'LISTEN', 'attend': 'LISTEN', 'prick ears': 'LISTEN', 'eavesdrop': 'LISTEN', 'auscultate': 'LISTEN', 'take in': 'LISTEN', 'pay attention': 'LISTEN', 'hear out': 'LISTEN', 'listen for': 'LISTEN', 'strain to hear': 'LISTEN', 'keep ear': 'LISTEN', 'hark for': 'LISTEN', 'attend for whispers': 'LISTEN',
+  'go': 'MOVE', 'move': 'MOVE', 'walk': 'MOVE', 'proceed': 'MOVE', 'advance': 'MOVE', 'travel': 'MOVE', 'step': 'MOVE', 'stride': 'MOVE', 'press on': 'MOVE', 'venture': 'MOVE', 'head': 'MOVE',
+  'enter': 'MOVE', 'go in': 'MOVE', 'step in': 'MOVE', 'cross threshold': 'MOVE', 'pass into': 'MOVE', 'ingress': 'MOVE', 'make entry': 'MOVE', 'set foot in': 'MOVE',
+  'leave': 'EXIT', 'depart': 'EXIT', 'withdraw': 'EXIT', 'retreat': 'EXIT', 'go out': 'EXIT', 'step out': 'EXIT', 'egress': 'EXIT', 'take leave': 'EXIT', 'quit': 'EXIT', 'clear out': 'EXIT',
+  'open': 'OPEN', 'unseal': 'OPEN', 'unlatch': 'OPEN', 'uncap': 'OPEN', 'uncork': 'OPEN', 'unbar': 'OPEN', 'draw back': 'OPEN', 'crack open': 'OPEN', 'part': 'OPEN',
+  'close': 'CLOSE', 'shut': 'CLOSE', 'seal': 'CLOSE', 'latch': 'CLOSE', 'lock': 'CLOSE', 'bar': 'CLOSE', 'fasten': 'CLOSE', 'stop up': 'CLOSE', 'secure': 'CLOSE',
+  'push': 'PUSH', 'shove': 'PUSH', 'thrust': 'PUSH', 'press': 'PUSH', 'ram': 'PUSH', 'drive': 'PUSH', 'heave': 'PUSH', 'force': 'PUSH', 'shoulder': 'PUSH',
+  'pull': 'PULL', 'yank': 'PULL', 'draw': 'PULL', 'haul': 'PULL', 'tug': 'PULL', 'drag': 'PULL', 'reel': 'PULL', 'tow': 'PULL', 'wrench': 'PULL',
+  'use': 'USE', 'apply': 'USE', 'employ': 'USE', 'wield': 'USE', 'utilize': 'USE', 'operate': 'USE', 'handle': 'USE', 'brandish': 'USE', 'put to use': 'USE',
+  'peruse': 'LOOK', 'decipher': 'LOOK', 'sound out': 'LOOK', 'recite': 'LOOK', 'interpret': 'LOOK',
+  'write': 'SAY', 'script': 'SAY', 'inscribe': 'SAY', 'pen': 'SAY', 'note': 'SAY', 'record': 'SAY', 'etch': 'SAY', 'carve': 'SAY', 'engrave': 'SAY', 'scribe': 'SAY',
+  'swear': 'SWEAR', 'vow': 'SWEAR', 'pledge': 'SWEAR', 'oath': 'SWEAR', 'avow': 'SWEAR', 'bind self': 'SWEAR', 'promise': 'SWEAR', 'covenant': 'SWEAR', 'take oath': 'SWEAR',
+  'defy': 'RENOUNCE', 'resist': 'RENOUNCE', 'oppose': 'RENOUNCE', 'withstand': 'RENOUNCE', 'spurn': 'RENOUNCE', 'flout': 'RENOUNCE', 'challenge': 'RENOUNCE', 'stand against': 'RENOUNCE', 'renounce': 'RENOUNCE',
+  'attack': 'ATTACK', 'strike': 'ATTACK', 'hit': 'ATTACK', 'smite': 'ATTACK', 'hew': 'ATTACK', 'slash': 'ATTACK', 'stab': 'ATTACK', 'assault': 'ATTACK', 'bash': 'ATTACK', 'wallop': 'ATTACK', 'cut down': 'ATTACK', 'lay into': 'ATTACK',
+  'rest': 'REST', 'sleep': 'REST', 'doze': 'REST', 'slumber': 'REST', 'recover': 'REST', 'pause': 'REST', 'take a breath': 'REST', 'camp': 'REST', 'bivouac': 'REST',
+  'wait': 'REST', 'delay': 'REST', 'hold': 'REST', 'bide': 'REST', 'linger': 'REST', 'stand by': 'REST', 'stay': 'REST', 'abide': 'REST',
+  'forge': 'COMBINE', 'hammer': 'COMBINE', 'temper': 'COMBINE', 'shape': 'COMBINE', 'smelt': 'COMBINE', 'weld': 'COMBINE', 'work iron': 'COMBINE', 'beat metal': 'COMBINE',
+  'craft': 'COMBINE', 'make': 'COMBINE', 'fashion': 'COMBINE', 'assemble': 'COMBINE', 'fabricate': 'COMBINE', 'brew': 'COMBINE', 'concoct': 'COMBINE', 'put together': 'COMBINE', 'prepare': 'COMBINE', 'combine': 'COMBINE',
+  'break': 'DESTROY', 'shatter': 'DESTROY', 'crack': 'DESTROY', 'smash': 'DESTROY', 'splinter': 'DESTROY', 'snap': 'DESTROY', 'ruin': 'DESTROY', 'wreck': 'DESTROY', 'destroy': 'DESTROY',
+  'climb': 'MOVE', 'scale': 'MOVE', 'scramble': 'MOVE', 'ascend': 'MOVE', 'mount': 'MOVE', 'shinny': 'MOVE', 'clamber': 'MOVE', 'go up': 'MOVE',
+  'hide': 'WITHHOLD', 'conceal': 'WITHHOLD', 'cover': 'WITHHOLD', 'stash': 'WITHHOLD', 'secrete': 'WITHHOLD', 'veil': 'WITHHOLD', 'shroud': 'WITHHOLD', 'take cover': 'WITHHOLD', 'go to ground': 'WITHHOLD',
+  'search': 'SEARCH', 'rummage': 'SEARCH', 'scour': 'SEARCH', 'comb': 'SEARCH', 'probe': 'SEARCH', 'inspect for': 'SEARCH', 'look for': 'SEARCH', 'rifle': 'SEARCH', 'turn out': 'SEARCH',
+  'pray': 'PRAY', 'entreat': 'PRAY', 'implore': 'PRAY', 'supplicate': 'PRAY', 'invoke': 'PRAY', 'appeal to': 'PRAY', 'call upon': 'PRAY', 'petition': 'PRAY',
+  'reveal': 'REVEAL', 'disclose': 'REVEAL', 'unveil': 'REVEAL', 'uncover': 'REVEAL', 'divulge': 'REVEAL', 'make known': 'REVEAL',
+  'i': 'INVENTORY', 'inventory': 'INVENTORY', 'pack': 'INVENTORY', 'bag': 'INVENTORY',
+  'eat': 'EAT', 'consume': 'EAT', 'devour': 'EAT', 'chew': 'EAT', 'bite': 'EAT', 'gnaw': 'EAT', 'feast': 'EAT', 'dine': 'EAT', 'nibble': 'EAT',
+  'drink': 'EAT', 'quaff': 'EAT', 'swig': 'EAT', 'sip': 'EAT', 'imbibe': 'EAT', 'sup': 'EAT', 'gulp': 'EAT', 'tipple': 'EAT',
+  'ally': 'ALLY', 'ally with': 'ALLY',
+  'betray': 'BETRAY', 'turn on': 'BETRAY',
+  // New system-querying verbs
+  'consult': 'CONSULT_SYSTEM', 'check': 'CONSULT_SYSTEM', 'review': 'CONSULT_SYSTEM', 'read': 'CONSULT_SYSTEM', 'sense': 'CONSULT_SYSTEM', 'attune': 'CONSULT_SYSTEM',
+};
+
+
 export const LEXICON: Lexicon = {
-  verbs: {
-    "move": ["go", "walk", "run", "enter", "climb", "leave", "cross"],
-    "inspect": ["look", "examine", "study", "check", "approach", "l", "read", "inspect", "look at"],
-    "take": ["take", "get", "pick up", "grab"],
-    "drop": ["drop", "leave"],
-    "use_on": ["use", "apply", "put", "place", "play", "offer", "drink", "shelter"],
-    "open_close": ["open", "close", "shut", "lift lid"],
-    "unlock": ["unlock"],
-    "inventory": ["inventory", "i", "pack", "bag"],
-    "search": ["search", "look in", "rummage", "scour"],
-    "combine": ["combine", "merge", "join", "mix", "craft"],
-    "destroy": ["destroy", "break", "smash", "strike"],
-    "ask_about": ["ask"],
-    "forge_mask": ["forge", "craft", "make"],
-    "talk_to": ["talk to", "speak with", "talk", "converse", "address"],
-    "vocalize": ["say", "shout", "yell", "call"],
-    "eat": ["eat", "consume"],
-    "listen": ["listen", "hear"],
-    "push": ["push", "shove"],
-    "pull": ["pull", "drag"],
-    "give": ["give", "offer", "hand over"],
-    "attack": ["attack", "strike", "hit"],
-    "rest": ["rest", "sleep", "wait"],
-    "pray": ["pray", "chant", "invoke"],
-    "swear": ["swear", "pledge"],
-    "renounce": ["renounce", "forsake"],
-    "ally": ["ally with", "ally"],
-    "betray": ["betray", "turn on"],
-    "reveal": ["reveal", "show"],
-    "withhold": ["withhold", "hide"],
-  },
+  verbs: {}, // DEPRECATED: Verb logic is now handled by the new Thesaurus.
   nouns: {
     "mask_blank": ["blank mask", "shell", "unformed mask"],
     "crucible": ["crucible", "bowl", "pot"],
@@ -69,6 +114,11 @@ export const LEXICON: Lexicon = {
     "campfire": ["old campfire", "campfire", "fire"],
     "stone_pile": ["pile of stones", "stones", "pile", "rocks"],
     "apple": ["apple", "red apple"],
+    // New system nouns
+    "rumors": ["rumors", "whispers", "ticker"],
+    "accord": ["accord", "balance"],
+    "beat": ["beat", "pulse", "fates", "fate"],
+    "chronicle": ["chronicle", "echoes", "history", "record"],
   },
   directions: {
     "n": ["north", "n"],
@@ -80,207 +130,215 @@ export const LEXICON: Lexicon = {
   }
 };
 
-export const INTENTS: Intent[] = [
+export const INTENTS: Omit<Intent, 'root'>[] = [
   {
-    id: "inspect",
+    id: "LOOK",
     intentType: "INTERNAL",
-    verbs: ["inspect"],
     slots: ["object"],
     effects: [{ type: "message" }],
     hints: ["inspect <object>", "look at <object>"]
   },
   {
-    id: "move",
+    id: "MOVE",
     intentType: "PHYSICAL",
-    verbs: ["move"],
     slots: ["direction"],
     effects: [{ type: "move" }],
     hints: ["go north", "enter sanctum"]
   },
+  {
+    id: "EXIT",
+    intentType: "PHYSICAL",
+    slots: ["direction"],
+    effects: [{ type: "move" }],
+    hints: ["leave", "go out"]
+  },
   // Accord Intents
   {
-    id: "OATH_SWEAR",
+    id: "SWEAR",
     intentType: "SOCIAL",
-    verbs: ["swear"],
     slots: ["object"],
     effects: [],
     hints: ["swear to the council"]
   },
   {
-    id: "OATH_RENOUNCE",
+    id: "RENOUNCE",
     intentType: "SOCIAL",
-    verbs: ["renounce"],
     slots: ["object"],
     effects: [],
     hints: ["renounce the council"]
   },
   {
-    id: "ALLY_DECLARE",
+    id: "ALLY",
     intentType: "SOCIAL",
-    verbs: ["ally"],
     slots: ["object"],
     effects: [],
     hints: ["ally with the rebels"]
   },
   {
-    id: "BETRAY_ACT",
+    id: "BETRAY",
     intentType: "SOCIAL",
-    verbs: ["betray"],
     slots: ["object"],
     effects: [],
     hints: ["betray Elder Anah"]
   },
   {
-    id: "REVEAL_SECRET",
+    id: "REVEAL",
     intentType: "SOCIAL",
-    verbs: ["reveal"],
     slots: ["object"],
     effects: [],
   },
   {
     id: "WITHHOLD",
     intentType: "SOCIAL",
-    verbs: ["withhold"],
     slots: ["object"],
     effects: [],
   },
   // Physical/Inventory Intents
   {
-    id: "take",
+    id: "TAKE",
     intentType: "PHYSICAL",
-    verbs: ["take"],
     slots: ["object"],
     effects: [],
     hints: ["take crucible"]
   },
   {
-    id: "drop",
+    id: "DROP",
     intentType: "PHYSICAL",
-    verbs: ["drop"],
     slots: ["object"],
     effects: [],
     hints: ["drop crucible"]
   },
   {
-    id: "inventory",
+    id: "INVENTORY",
     intentType: "INTERNAL",
-    verbs: ["inventory"],
     slots: [],
     effects: [],
     hints: ["inventory"]
   },
   {
-    id: "open_close",
+    id: "OPEN",
     intentType: "PHYSICAL",
-    verbs: ["open_close"],
     slots: ["object"],
     effects: [],
-    hints: ["open chest"]
+    hints: ["open chest", "close chest"]
   },
   {
-    id: "unlock",
+    id: "CLOSE",
     intentType: "PHYSICAL",
-    verbs: ["unlock"],
+    slots: ["object"],
+    effects: [],
+    hints: ["close chest"]
+  },
+  {
+    id: "UNLOCK",
+    intentType: "PHYSICAL",
     slots: ["object", "tool"],
     effects: [],
     hints: ["unlock chest with key"]
   },
   {
-    id: "use_on",
+    id: "USE",
     intentType: "PHYSICAL",
-    verbs: ["use_on"],
     slots: ["tool", "object"],
     effects: [{ type: "message", text: "You use the item." }],
     hints: ["use crucible on hearth"]
   },
   {
-    id: "search",
+    id: "SEARCH",
     intentType: "INTERNAL",
-    verbs: ["search"],
     slots: ["object"],
     effects: [],
     hints: ["search hearth"],
   },
   {
-    id: "combine",
+    id: "COMBINE",
     intentType: "INTERNAL",
-    verbs: ["combine"],
     slots: ["object", "tool"],
     effects: [],
     hints: ["combine ash with waterskin"],
   },
   {
-    id: "destroy",
+    id: "DESTROY",
     intentType: "PHYSICAL",
-    verbs: ["destroy"],
     slots: ["object"],
     effects: [],
     hints: ["break crucible"],
   },
   {
-    id: "give",
+    id: "GIVE",
     intentType: "SOCIAL",
-    verbs: ["give"],
     slots: ["tool", "object"],
     effects: [{ type: "message", text: "There is no one here to give that to." }],
     hints: ["give <item> to <person>"]
   },
   {
-    id: "pull",
+    id: "PULL",
     intentType: "PHYSICAL",
-    verbs: ["pull"],
     slots: ["object"],
     effects: [{ type: "message", text: "It doesn't move." }],
   },
   {
-    id: "rest",
+    id: "REST",
     intentType: "INTERNAL",
-    verbs: ["rest"],
     slots: [],
     effects: [{ type: "message", text: "You rest for a moment, gathering your thoughts." }],
     hints: ["rest", "wait"]
   },
   {
-    id: "pray",
+    id: "PRAY",
     intentType: "SOCIAL",
-    verbs: ["pray"],
     slots: [],
     effects: [{ type: "message", text: "You offer a silent prayer. The air grows still." }],
     hints: ["pray", "chant"]
   },
+  // Informational system query
+  {
+    id: "CONSULT_SYSTEM",
+    intentType: "INTERNAL",
+    slots: ["object"],
+    effects: [{ type: "message" }],
+    hints: ["review rumors", "consult accord", "sense beat", "read echoes"],
+  },
   // Graceful Failure Intents
   {
-    id: "vocalize",
+    id: "SAY",
     intentType: "SOCIAL",
-    verbs: ["vocalize"],
     slots: [],
     effects: [{ type: "message", text: "Your voice echoes in the silence, but nothing answers." }],
   },
   {
-    id: "eat",
+    id: "TALK",
+    intentType: "SOCIAL",
+    slots: ["object"],
+    effects: [{ type: "message", text: "They do not respond." }],
+  },
+  {
+    id: "ASK",
+    intentType: "SOCIAL",
+    slots: ["object", "topic"],
+    effects: [{ type: "message", text: "They do not answer." }],
+  },
+  {
+    id: "EAT",
     intentType: "INTERNAL",
-    verbs: ["eat"],
     slots: [],
     effects: [{ type: "message", text: "You have no need for that here." }],
   },
   {
-    id: "listen",
+    id: "LISTEN",
     intentType: "INTERNAL",
-    verbs: ["listen"],
     slots: [],
     effects: [{ type: "message", text: "You listen intently, but hear only the wind whistling over the rock." }],
   },
   {
-    id: "push",
+    id: "PUSH",
     intentType: "PHYSICAL",
-    verbs: ["push"],
     slots: ["object"],
     effects: [{ type: "message", text: "It doesn't budge." }],
   },
   {
-    id: "attack",
+    id: "ATTACK",
     intentType: "PHYSICAL",
-    verbs: ["attack"],
     slots: ["object"],
     effects: [{ type: "message", text: "Violence is not the answer here." }],
   },

@@ -2,6 +2,7 @@ import React from 'react';
 import { GameState, Omen, Origin, Lexeme } from "../game/types";
 import { ScreenRenderer } from "./ScreenRenderer";
 import { PlayerStatus } from './PlayerStatus';
+import { AudioManager } from '../systems/audio/AudioManager';
 
 type Props = {
   state: GameState;
@@ -12,6 +13,7 @@ type Props = {
   onAcceptOmen: (omen: Omen, approach: 'embrace' | 'resist') => void;
   onReset: () => void;
   onCloseTester: () => void;
+  audioManager: AudioManager;
 };
 
 export const Game: React.FC<Props> = (props) => {

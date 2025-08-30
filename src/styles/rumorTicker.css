@@ -1,0 +1,53 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+.rumor-ticker-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--secondary-text-color);
+  font-style: italic;
+  flex-grow: 1;
+  min-width: 0; /* Important for flexbox to allow shrinking */
+}
+
+.rumor-text-wrapper {
+  position: relative;
+  height: 1.2em; /* Set a fixed height to prevent layout shifts */
+  overflow: hidden;
+  text-align: center;
+  flex-grow: 1;
+}
+
+.rumor-text {
+  position: absolute;
+  width: 100%;
+  left: 0;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rumor-text.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.rumor-pause-btn {
+  background: none;
+  border: none;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  opacity: 0.6;
+  font-size: 0.8rem;
+}
+.rumor-pause-btn:hover {
+  opacity: 1;
+}

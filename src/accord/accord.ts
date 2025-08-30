@@ -82,6 +82,32 @@ export function applyDelta(state: GameState, delta: EngineDelta): GameState {
     
     // loyalty, beats, echoes would be handled here
     
+    // --- New Rumor & Echo Feedback Logic ---
+    let newRumors = [...(next.rumors || [])];
+    const MAX_RUMORS = 5;
+
+    const addRumor = (text: string) => {
+        if (newRumors.length > 0 && newRumors[newRumors.length - 1].text === text) return;
+        newRumors.push({ text, id: crypto.randomUUID() });
+        if (newRumors.length > MAX_RUMORS) {
+            newRumors.shift();
+        }
+    };
+
+    if (delta.accord && delta.accord.stability !== 0) {
+        if (delta.accord.stability > 0) addRumor("The Accord strengthens.");
+        else addRumor("The Accord frays.");
+    }
+    if (delta.echoes && delta.echoes.length > 0) {
+        addRumor("An echo ripples through time.");
+        next.lastEchoTimestamp = Date.now();
+    }
+    if (delta.beats && delta.beats.length > 0) {
+        addRumor("A fated event draws near.");
+    }
+
+    next = { ...next, rumors: newRumors };
+
     return next;
 }
 

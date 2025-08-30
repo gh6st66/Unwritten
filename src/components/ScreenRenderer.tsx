@@ -19,6 +19,7 @@ import { PlayerStatus } from "./PlayerStatus";
 import { LiveRegion } from "./LiveRegion";
 import { WorldPanel } from './WorldPanel';
 import { RumorQueue } from './RumorQueue';
+import { AudioManager } from "../systems/audio/AudioManager";
 
 type Props = {
   screen: GameScreen;
@@ -31,6 +32,7 @@ type Props = {
   onAcceptOmen: (omen: Omen, approach: 'embrace' | 'resist') => void;
   onReset: () => void;
   onCloseTester: () => void;
+  audioManager: AudioManager;
 };
 
 /**
@@ -80,6 +82,7 @@ export function ScreenRenderer(props: Props) {
     onCommitFirstMask,
     onContinueAfterReveal,
     onCloseTester,
+    audioManager,
   } = props;
 
   const [isParsing, setIsParsing] = useState(false);
@@ -193,7 +196,7 @@ export function ScreenRenderer(props: Props) {
             disabled={isParsing} 
           />
           
-          <ParserInput onSubmit={handleParseSubmit} disabled={isParsing} />
+          <ParserInput onSubmit={handleParseSubmit} disabled={isParsing} audioManager={audioManager} />
         </div>
       );
     }

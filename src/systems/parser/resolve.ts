@@ -5,29 +5,26 @@
 import { Player, SceneObject } from '../../game/types';
 import { getItemRule } from '../../data/itemCatalog';
 import type { Intent, Lexicon, ParseResult, ResolveResult, SceneIndex, SlotName, FailReason } from './types';
+import { THESAURUS } from '../../data/parser/content';
 
-/** Maps a synonym to all its canonical verbs. Returns an empty array if not found. */
-function findCanonicals(verb: string | undefined, lexicon: Record<string, string[]>): string[] {
-  if (!verb) return [];
+/** Maps a synonym to its root action ID. Returns null if not found. */
+function findRoot(verb: string | undefined, thesaurus: Record<string, string>, lexicon: Lexicon): string | null {
+  if (!verb) return null;
   const lowerVerb = verb.toLowerCase();
-  const results: string[] = [];
-
-  // Check if it's already a canonical verb.
-  if (Object.prototype.hasOwnProperty.call(lexicon, lowerVerb)) {
-    results.push(lowerVerb);
-  }
-
-  // Check if it's a synonym for any canonical verbs.
-  for (const canonical in lexicon) {
-    if (Object.prototype.hasOwnProperty.call(lexicon, canonical) && lexicon[canonical].includes(lowerVerb)) {
-      if (!results.includes(canonical)) {
-        results.push(canonical);
-      }
-    }
+  
+  // Direct match in thesaurus
+  if (thesaurus[lowerVerb]) {
+    return thesaurus[lowerVerb];
   }
   
-  return results;
+  // Check if it's a value in the directions map
+  for (const dir_canon in lexicon.directions) {
+      if (lexicon.directions[dir_canon].includes(lowerVerb)) return 'MOVE';
+  }
+
+  return null;
 }
+
 
 /**
  * High-level resolver. Takes a parsed result and context, returns a final action or failure.
@@ -44,16 +41,16 @@ export function resolve(
   // supposed object is actually a known verb.
   if (p.verb === 'inspect' && p.slots.object && Object.keys(p.slots).length === 1) {
     const potentialNoun = p.slots.object;
-    const verbCanonicals = findCanonicals(potentialNoun, lexicon.verbs);
+    const potentialRoot = findRoot(potentialNoun, THESAURUS, lexicon);
     
-    if (verbCanonicals.length > 0) {
+    if (potentialRoot) {
       // The word is a verb. Let's see if it can be a zero-argument command.
-      const verbIntents = intents.filter(i => verbCanonicals.some(c => i.verbs.includes(c)));
+      const verbIntents = intents.filter(i => i.root === potentialRoot);
       const zeroArgIntent = verbIntents.find(i => i.slots.length === 0);
       
       if (zeroArgIntent) {
          // It's a valid zero-argument command. Re-parse and proceed.
-         p = { raw: p.raw, verb: zeroArgIntent.verbs[0], slots: {} };
+         p = { raw: p.raw, verb: potentialNoun, slots: {} };
       } else if (verbIntents.length > 0) {
          // It's a verb that needs arguments (e.g., "drop needs an object").
          return fail("missing_slots_or_reqs", `What do you want to ${potentialNoun}?`, verbIntents[0].hints);
@@ -61,20 +58,20 @@ export function resolve(
     }
   }
   
-  // 1. Map the parsed verb to all possible canonical verbs.
-  const canonicalVerbs = findCanonicals(p.verb, lexicon.verbs);
-  if (canonicalVerbs.length === 0) {
+  // 1. Map the parsed verb to its root action ID.
+  const rootId = findRoot(p.verb, THESAURUS, lexicon);
+  if (!rootId) {
     return fail("unknown_verb", `I don't know how to '${p.verb}'.`, suggestVerbs(scene, intents));
   }
 
-  // 2. Find all intents that could match any of these canonicals.
-  const candidateIntents = intents.filter(i => canonicalVerbs.some(cv => i.verbs.includes(cv)));
+  // 2. Find all intents that could match the root action.
+  const candidateIntents = intents.filter(i => i.root === rootId);
   if (candidateIntents.length === 0) {
     return fail("unknown_intent", `You can't do that here.`, suggestVerbs(scene, intents));
   }
 
   // 3. Bind objects and other slots from the scene context.
-  let bound = bindSlots(p, scene, lexicon, player, canonicalVerbs);
+  let bound = bindSlots(p, scene, lexicon, player, rootId);
   
   // If binding failed because an object wasn't found, check if a slotless interpretation is possible.
   if (!bound.ok && bound.reason === 'unknown_object') {
@@ -93,10 +90,13 @@ export function resolve(
   
   // 4. Find the best intent that matches the available slots and requirements.
   const matchedIntents = candidateIntents.filter(i => {
-    const hasAllSlots = i.slots.every(s => bound.bindings[s] !== undefined || s === 'object'); // Allow object to be optional for some intents
+    // An intent matches if all of its required slots are present in the bindings.
+    const hasAllSlots = i.slots.every(s => bound.bindings[s] !== undefined);
     const meetsReqs = checkRequirements(i, player, scene);
+    
     // Special check for no-slot intents. If we have bindings, it's not a match.
     if (i.slots.length === 0 && Object.keys(bound.bindings).length > 0) return false;
+    
     return hasAllSlots && meetsReqs;
   });
 
@@ -109,14 +109,8 @@ export function resolve(
     return fail("missing_slots_or_reqs", "That doesn't make sense.", candidateIntents[0]?.hints?.slice(0, 3) ?? []);
   }
   
-  // If multiple intents match (e.g. single-word "leave" could be move or drop), we need to prioritize.
-  // A simple heuristic: prefer intents with fewer slots for single-word commands.
-  const intent = matchedIntents.sort((a, b) => {
-    if (Object.keys(p.slots).length === 0) {
-        return a.slots.length - b.slots.length; // Prefer zero-slot intents like `move`
-    }
-    return b.slots.length - a.slots.length; // Otherwise prefer more specific intents
-  })[0];
+  // If multiple intents match, prefer the one with more matching slots (more specific).
+  const intent = matchedIntents.sort((a, b) => b.slots.length - a.slots.length)[0];
 
   return {
     ok: true,
@@ -138,7 +132,7 @@ function suggestVerbs(scene: SceneIndex, intents: Intent[]): string[] {
   if (scene.objects.length > 0) {
     suggestions.push(`inspect ${scene.objects[0].name}`);
   }
-  if (intents.find(i => i.id === 'move')) {
+  if (intents.find(i => i.id === 'MOVE')) {
     const firstExit = Object.keys(scene.exits)[0];
     if (firstExit) suggestions.push(`go ${firstExit}`);
   }
@@ -162,13 +156,13 @@ function bindSlots(
     scene: SceneIndex, 
     lexicon: Lexicon, 
     player: Player,
-    canonicalVerbs: string[]
+    rootId: string
 ): { ok: boolean, bindings: Record<string, string>, reason?: FailReason, message?: string, suggested?: string[] } {
   const bindings: Record<string, string> = {};
   let hadObjectFailure = false;
 
-  const isDropIntent = canonicalVerbs.includes('drop');
-  const isCombineIntent = canonicalVerbs.includes('combine');
+  const isDropIntent = rootId === 'DROP';
+  const isCombineIntent = rootId === 'COMBINE';
 
   if (isDropIntent && p.slots.object) {
     const nounToDrop = p.slots.object;
@@ -230,7 +224,9 @@ function bindSlots(
       }
       bindings[slotName] = objects[0].id;
     } else if (slotName === 'direction') {
-      const canonicalDir = findCanonicals(value, lexicon.directions)[0];
+      const dirCanonicals = Object.keys(lexicon.directions).filter(canon => lexicon.directions[canon].includes(value));
+      const canonicalDir = dirCanonicals[0] || value;
+
       if (canonicalDir && scene.exits[canonicalDir]) {
         bindings.direction = canonicalDir;
       } else if (scene.exits[value]) { // Also check non-canonical, e.g. 'enter' -> 'in'
@@ -242,8 +238,8 @@ function bindSlots(
          } else {
             // It could be something like "north path". Check if a part of it is a direction.
             const words = value.split(' ');
-            const dirWord = words.find(w => findCanonicals(w, lexicon.directions).length > 0);
-            const canonicalDirFromPhrase = dirWord ? findCanonicals(dirWord, lexicon.directions)[0] : null;
+            const dirWord = words.find(w => Object.values(lexicon.directions).flat().includes(w));
+            const canonicalDirFromPhrase = dirWord ? Object.keys(lexicon.directions).find(c => lexicon.directions[c].includes(dirWord!)) : null;
             if (canonicalDirFromPhrase && scene.exits[canonicalDirFromPhrase]) {
               bindings.direction = canonicalDirFromPhrase;
             }
