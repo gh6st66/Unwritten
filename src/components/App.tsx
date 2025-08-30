@@ -8,27 +8,41 @@ import TitleScreen from "./TitleScreen";
 import { ChronicleHome } from "./chronicle/ChronicleHome";
 import { Game } from "./Game";
 import { GameStatusOverlay } from "./GameStatusOverlay";
+import { InGameChronicle } from "./InGameChronicle";
+import CollapseModal from "./CollapseModal";
 
 export default function App() {
   const { state, send, canContinue, loadGame } = useEngine();
   const [showGlossary, setShowGlossary] = useState(false);
   const [showChronicle, setShowChronicle] = useState(false);
+  const [showInGameChronicle, setShowInGameChronicle] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Prevent shortcuts from firing when typing in an input field
+      const target = event.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) {
+        return;
+      }
+
       if (event.key.toLowerCase() === 'g') {
         setShowGlossary(g => !g);
       }
       if (event.key.toLowerCase() === 'c') {
-        setShowChronicle(c => !c);
+         state.phase === 'TITLE' ? setShowChronicle(c => !c) : setShowInGameChronicle(c => !c);
       }
+       if (event.key.toLowerCase() === 'h') {
+        if (state.phase === 'SCENE') {
+            setShowInGameChronicle(c => !c);
+        }
+    }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [state.phase]);
 
   const onStartRun = (origin: Origin) => send({ type: 'START_RUN', origin });
   const onCommitFirstMask = (lexeme: Lexeme) => send({ type: 'COMMIT_FIRST_MASK', lexeme });
@@ -61,6 +75,8 @@ export default function App() {
     const message = state.screen.kind === 'LOADING' ? state.screen.message : 'The ink settles...';
     return <LoadingScreen message={message} />;
   }
+  
+  const collapseScreen = state.phase === 'COLLAPSE' && state.screen.kind === 'COLLAPSE' ? state.screen : null;
 
   return (
     <div className="app-container">
@@ -75,10 +91,18 @@ export default function App() {
         onReset={onReset}
         onCloseTester={() => send({ type: 'CLOSE_TESTER' })}
       />
-      <Footer onGlossaryOpen={() => setShowGlossary(true)} onChronicleOpen={() => setShowChronicle(true)} />
+      <Footer onGlossaryOpen={() => setShowGlossary(true)} onChronicleOpen={() => state.phase === 'SCENE' ? setShowInGameChronicle(true) : setShowChronicle(true)} />
       {showGlossary && <GlossaryView categories={glossaryData} onClose={() => setShowGlossary(false)} />}
       {showChronicle && <ChronicleHome onClose={() => setShowChronicle(false)} />}
-      <GameStatusOverlay state={state} onToggleChronicle={() => setShowChronicle(c => !c)} onToggleGlossary={() => setShowGlossary(g => !g)} />
+      {showInGameChronicle && <InGameChronicle onClose={() => setShowInGameChronicle(false)} />}
+      <GameStatusOverlay state={state} onToggleChronicle={() => state.phase === 'SCENE' ? setShowInGameChronicle(c => !c) : setShowChronicle(c => !c)} onToggleGlossary={() => setShowGlossary(g => !g)} />
+      {/* FIX: Use the narrowed 'collapseScreen' variable to safely access props and fix type errors. */}
+      <CollapseModal 
+        open={!!collapseScreen}
+        reason={collapseScreen ? collapseScreen.reason : 'choice'}
+        summaryLog={collapseScreen ? collapseScreen.summaryLog : []}
+        onContinue={() => send({type: 'RETURN_TO_TITLE'})}
+      />
     </div>
   );
 }
@@ -109,7 +133,7 @@ function Header({ state }: { state: GameState }) {
 function Footer({ onGlossaryOpen, onChronicleOpen }: { onGlossaryOpen: () => void; onChronicleOpen: () => void; }) {
   return (
     <div className="p-3 text-xs opacity-70 border-t flex justify-between items-center">
-      <span>Unwritten • React + TS</span>
+      <span>Unwritten • History (h)</span>
       <div style={{display: 'flex', gap: '1rem'}}>
         <button className="glossary-toggle" onClick={onChronicleOpen}>
           Chronicle (c)

@@ -8,15 +8,18 @@ import { LexemeTier } from "../types/lexeme";
 import { INTENTS, LEXICON, SCENES } from '../data/parser/content';
 import { ParserEngine } from '../systems/parser/engine';
 import { createInventory } from '../systems/inventory';
-import { recordEvent, getEvents } from '../systems/chronicle';
+// FIX: Import getChronicleData along with getEvents.
+import { getEvents, getChronicleData } from '../systems/chronicle';
 import { getMarkDef } from "../systems/Marks";
 import { OMENS_DATA } from "../data/claims";
-import { ChronicleEvent } from "../domain/events";
 import { handleIntent, applyDelta, selectVariant, selectAtmosphere } from "../accord/accord";
 import { IntentCtx } from "../accord/types";
 import { INITIAL_ACCORD, INITIAL_FACTIONS, INITIAL_NPCS } from "../data/accord/state";
 import { INITIAL_OMEN_WEIGHTS } from "../data/omen/initial";
 import { updateOmenWeights } from "../omen/omen";
+import { recordEvent } from '../systems/chronicle';
+import { generateSummary } from '../chronicle/summary';
+import { calculateBias } from '../chronicle/bias';
 
 const STORAGE_KEY = "unwritten:v1";
 
@@ -33,6 +36,7 @@ export const INITIAL: GameState = {
     world: null,
     civs: [],
   },
+  worldFacts: [],
   player: {
     id: "p1",
     name: "The Unwritten",
@@ -64,8 +68,19 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       return INITIAL;
     }
     case "REQUEST_NEW_RUN": {
+      const chronicleEvents = getEvents();
+      const biases = calculateBias(chronicleEvents);
+      // Apply biases to a fresh state
+      let biasedInitial = structuredClone(INITIAL);
+      for (const [key, delta] of Object.entries(biases.factionStanceDeltas)) {
+          const [factionId, maskTag] = key.split(':');
+          if (biasedInitial.factions[factionId] && biasedInitial.factions[factionId].stance[maskTag] !== undefined) {
+              // FIX: Cast delta to number as its type is inferred as unknown.
+              biasedInitial.factions[factionId].stance[maskTag] += delta as number;
+          }
+      }
       return {
-        ...state,
+        ...biasedInitial,
         phase: "LOADING",
         screen: { kind: "LOADING", message: "Reading the threads of fate...", context: "ORIGIN_GEN" },
       };
@@ -100,7 +115,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       return {
         ...INITIAL,
         player: initialPlayer,
-        phase: "WORLD_GEN",
+        phase: "LOADING",
         runId: crypto.randomUUID(),
         activeOrigin: ev.origin,
         screen: { kind: "LOADING", message: "The world takes shape...", context: "WORLD_GEN" },
@@ -112,6 +127,7 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
         ...state,
         phase: "FIRST_MASK_FORGE",
         world: { world: ev.world, civs: ev.civs },
+        worldFacts: ev.worldFacts,
         screen: { kind: "FIRST_MASK_FORGE" },
       }
     }
@@ -177,11 +193,10 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
         return {
           ...state,
           phase: "COLLAPSE",
-          screen: { kind: "COLLAPSE", reason: `The world faded. (Scene ${ev.sceneId} not found)` }
+          screen: { kind: "COLLAPSE", reason: `The world faded. (Scene ${ev.sceneId} not found)`, summaryLog: [] }
         };
       }
       
-      // Ensure immutability by deep cloning scene data for runtime state.
       const newObjects = structuredClone(sceneData.objects);
       const sceneDescription = sceneData.description;
       const newFlags = new Set(state.player.flags);
@@ -224,6 +239,12 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
     
       const delta = handleIntent(intentCtx, state);
       let nextState = applyDelta(state, delta);
+      
+      if (delta.echoes) {
+        for(const echo of delta.echoes) {
+            recordEvent({ type: echo.event as any, runId: state.runId, ...echo.payload });
+        }
+      }
 
       recordEvent({type: 'ACCORD_DELTA_APPLIED', runId: state.runId, sceneId: state.currentSceneId, intentId: intentCtx.intentId, delta });
       
@@ -236,13 +257,18 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       return nextState;
     }
     case "GENERATION_FAILED": {
-        return { ...state, phase: "COLLAPSE", screen: { kind: "COLLAPSE", reason: `The world unravelled. (${ev.error})` } };
+        return { ...state, phase: "COLLAPSE", screen: { kind: "COLLAPSE", reason: `The world unravelled. (${ev.error})`, summaryLog: [] } };
     }
     case "END_RUN": {
-      if (state.player.resources.TIME <= 0) {
-        recordEvent({ type: 'RUN_ENDED', runId: state.runId, outcome: 'Time ran out.' });
-      }
-      return { ...state, phase: "COLLAPSE", screen: { kind: "COLLAPSE", reason: ev.reason } };
+        const chronicleEvents = getEvents();
+        // FIX: Use the imported getChronicleData to correctly find the last run.
+        const lastRun = Object.values(getChronicleData().runs).find(r => r.runId === state.runId);
+        const summaryLog = lastRun ? generateSummary(lastRun, chronicleEvents) : ['The Unwritten\'s path ends... for now.'];
+        recordEvent({ type: 'RUN_ENDED', runId: state.runId, outcome: ev.reason });
+        return { ...state, phase: "COLLAPSE", screen: { kind: "COLLAPSE", reason: ev.reason, summaryLog } };
+    }
+     case "RETURN_TO_TITLE": {
+      return { ...INITIAL, phase: "TITLE", screen: { kind: "TITLE" } };
     }
     case "LOAD_STATE": {
       const snapshot = ev.snapshot;
@@ -255,9 +281,6 @@ export function reduce(state: GameState, ev: GameEvent): GameState {
       return INITIAL;
     }
     default: {
-      // This is a trick to enforce exhaustiveness checking.
-      // If you add a new event type and don't handle it in the switch,
-      // TypeScript will error here because `ev` will not be of type `never`.
       const _exhaustiveCheck: never = ev;
       return state;
     }
@@ -289,3 +312,4 @@ function hash(s: string) {
   for (let i = 0; i < s.length; i++) h = (h << 5) - h + s.charCodeAt(i);
   return h | 0;
 }
+// FIX: Removed incorrect local stub function for getChronicleData. The correct one is now imported.

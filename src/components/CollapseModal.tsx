@@ -3,7 +3,8 @@ import '../styles/collapseModal.css';
 
 interface Props {
   open: boolean;
-  reason: "defeat" | "entropy" | "choice" | "escape";
+  // FIX: Broaden type to accept any string, as GameState can provide a wider range of reasons.
+  reason: "defeat" | "entropy" | "choice" | "escape" | string;
   summaryLog: string[];
   onContinue: () => void; // begins next run
 }

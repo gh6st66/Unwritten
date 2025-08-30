@@ -1,0 +1,92 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+.ingame-chronicle-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.ingame-chronicle-content {
+  background-color: var(--surface-color);
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.ingame-chronicle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.ingame-chronicle-header h2 {
+  font-size: 1.5rem;
+}
+
+.ingame-chronicle-header button {
+  font-size: 2rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: var(--secondary-text-color);
+  padding: 0.5rem;
+}
+
+.ingame-chronicle-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  overflow-y: auto;
+}
+
+.summary-log {
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+  font-style: italic;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bias-description {
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  color: var(--secondary-text-color);
+}
+
+.bias-list {
+  list-style-type: '» ';
+  padding-left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--primary-text-color);
+}
+
+.empty-section-message {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--secondary-text-color);
+}

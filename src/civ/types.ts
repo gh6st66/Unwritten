@@ -36,6 +36,7 @@ export interface Faction {
   agenda: 'expansion' | 'trade' | 'ascetic' | 'heresy' | 'seafaring';
   stance: Record<FactionId, -1 | 0 | 1>;
   power: number;
+  worldFactionId?: string; // Link to a high-level world faction
 }
 
 export type Disposition = "friendly" | "neutral" | "hostile" | "scheming";

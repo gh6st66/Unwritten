@@ -1,0 +1,35 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+.rumor-queue {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.rumor-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.rumor-chip {
+  padding: 0.4rem 0.8rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-color);
+  background-color: transparent;
+  color: var(--secondary-text-color);
+  font-size: 0.8rem;
+  font-style: italic;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rumor-chip:hover:not(:disabled) {
+  background-color: #2a2a2e;
+  color: var(--primary-text-color);
+  border-color: #555;
+}

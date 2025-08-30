@@ -1,0 +1,90 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+/* Main container for the hover/focus area */
+.game-status-overlay-container {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 10;
+  color: var(--secondary-text-color);
+  font-size: 0.75rem;
+  /* Make it focusable for keyboard users */
+  outline: none;
+}
+
+/* The small, always-visible handle */
+.game-status-overlay-handle {
+  padding: 0.5rem 1rem;
+  background-color: rgba(18, 18, 18, 0.8);
+  border: 1px solid #333;
+  border-radius: 8px;
+  cursor: default;
+  transition: opacity 0.2s ease-in-out, visibility 0.2s;
+  user-select: none;
+}
+
+/* The full content panel, hidden by default */
+.game-status-overlay-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  min-width: 220px;
+  opacity: 0;
+  visibility: hidden;
+  /* Use a delay on visibility to allow fade-out animation */
+  transition: opacity 0.2s ease-in-out, visibility 0s 0.2s;
+  
+  background-color: rgba(18, 18, 18, 0.8);
+  backdrop-filter: blur(4px);
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Show content and hide handle on hover/focus */
+.game-status-overlay-container:hover .game-status-overlay-content,
+.game-status-overlay-container:focus-within .game-status-overlay-content {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.game-status-overlay-container:hover .game-status-overlay-handle {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Styles for the key hints section */
+.game-status-key-hints {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #333;
+}
+
+.game-status-key-hints button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.game-status-key-hints kbd {
+    background: #333;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    font-family: monospace;
+    margin-right: 0.25rem;
+}

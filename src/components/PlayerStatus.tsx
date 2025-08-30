@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { GameState } from '../game/types';
 import { getItemRule } from '../data/itemCatalog';
 import { OmenForecast } from './OmenForecast';
@@ -13,12 +13,44 @@ interface Props {
 }
 
 export const PlayerStatus: React.FC<Props> = ({ state }) => {
-  const { player } = state;
-  const { inventory, marks } = player;
+  const { player, npcs } = state;
+  const { inventory, marks, mask } = player;
+
+  const recognition = useMemo(() => {
+    if (!npcs || Object.keys(npcs).length === 0) {
+      return { trust: 0, fear: 0 };
+    }
+    const totalTrust = Object.values(npcs).reduce((sum, npc) => sum + npc.recognition.trust, 0);
+    const totalFear = Object.values(npcs).reduce((sum, npc) => sum + npc.recognition.fear, 0);
+    return { trust: totalTrust, fear: totalFear };
+  }, [npcs]);
+
 
   return (
     <div className="player-status-container">
       <OmenForecast state={state} />
+      
+      <div className="status-section">
+        <h3 className="status-header">Recognition Meter</h3>
+        <div className="recognition-meter">
+          <span>Trust: {recognition.trust}</span>
+          <span>Fear: {recognition.fear}</span>
+        </div>
+      </div>
+
+       {mask && (
+        <div className="status-section">
+          <h3 className="status-header">Mask: {mask.name}</h3>
+          <div className="mask-tags">
+            {Object.keys(mask.themeOfFate).map(theme => (
+              <span className="mask-tag" key={theme}>
+                {theme}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="status-section">
         <h3 className="status-header">Inventory</h3>
         {inventory.slots.length > 0 ? (

@@ -10,45 +10,62 @@ export interface WorldGenConfig {
   worldSeed: string;
   historyYears: number;
   variance: number;
+  numFactions: number;
 }
 
-export interface GeoCell {
-  id: string;
-  q: number; r: number; // hex axial coords
-  elevation: number;
-  moisture: number;
-  biome: 'tundra' | 'steppe' | 'forest' | 'desert' | 'wetland' | 'alpine' | 'coast';
-  features: string[];
+export interface Site {
+    id: string;
+    defId: string; // From content/sites.ts
+    name: string;
 }
 
 export interface RegionIdentity {
-  temperament: number; // -1 pacifist .. +1 militant
-  piety: number;       // 0..1
-  wealth: number;      // 0..1
-  law: number;         // -1 clan .. +1 central
-  dialectId: DialectId;
+    wealth: number;
+    law: number;
+    temperament: number;
+    dialectId: DialectId;
+}
+
+export interface GridCell {
+    biome: 'tundra' | 'steppe' | 'forest' | 'desert' | 'wetland' | 'alpine' | 'coast';
 }
 
 export interface Region {
   id: string;
   name: string;
-  cells: string[]; // GeoCell ids
+  neighbors: string[]; // Region IDs
+  biome: 'tundra' | 'steppe' | 'forest' | 'desert' | 'wetland' | 'alpine' | 'coast';
+  dialectId: DialectId;
+  sites: Site[];
   identity: RegionIdentity;
+  cells: number[];
 }
 
-export interface WorldEvent {
+export interface Faction {
   id: string;
-  year: number;
-  kind: 'war' | 'schism' | 'plague' | 'discovery' | 'cataclysm';
-  regionIds: string[];
-  summary: string;
+  name:string;
+  ethos: {
+    tradition: number; // -1 (progress) to +1 (tradition)
+    ambition: number;  // -1 (caution) to +1 (ambition)
+    stoicism: number;  // -1 (passion) to +1 (stoicism)
+  };
+  claims: string[]; // regions claimed
 }
+
+export type FactionRelations = Record<string, number>; // Key is "faction1_id:faction2_id" sorted alphabetically
 
 export interface World {
   id: WorldId;
   seed: string;
-  grid: Record<string, GeoCell>;
   regions: Record<string, Region>;
-  civIds: string[];
-  history: WorldEvent[];
+  factions: Record<string, Faction>;
+  relations: FactionRelations;
+  history: any[]; // Placeholder for historical events
+  grid: GridCell[];
+  civIds?: string[];
 }
+
+// Stubs for future systems
+export type Beat = any;
+export type Echo = any;
+export type Pressure = any;

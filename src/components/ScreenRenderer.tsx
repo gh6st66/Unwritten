@@ -17,6 +17,8 @@ import '../styles/narrativeLog.css';
 import { OmenView } from "./ClaimView";
 import { PlayerStatus } from "./PlayerStatus";
 import { LiveRegion } from "./LiveRegion";
+import { WorldPanel } from './WorldPanel';
+import { RumorQueue } from './RumorQueue';
 
 type Props = {
   screen: GameScreen;
@@ -151,8 +153,16 @@ export function ScreenRenderer(props: Props) {
       if (screen.isHallucinating) {
         sceneWrapperClasses.push("hallucinating");
       }
+      const isNewRun = state.day === 1 && screen.narrativeLog.length <= 2;
+
       return (
         <div className={sceneWrapperClasses.join(' ')}>
+          {isNewRun && state.worldFacts.length > 0 && (
+            <div className="new-run-banner">
+              {state.worldFacts.map((fact, i) => <p key={i}>{fact}</p>)}
+            </div>
+          )}
+
           <LiveRegion message={lastLogEntry} />
           <div className="narrative-log">
             {screen.narrativeLog.map((line, index) => <p key={index} className="narrative-log-entry">{line}</p>)}
@@ -172,25 +182,18 @@ export function ScreenRenderer(props: Props) {
             </div>
           )}
           
-          <PlayerStatus state={state} />
+          <div className="status-panels">
+            <PlayerStatus state={state} />
+            <WorldPanel state={state} />
+          </div>
+
+          <RumorQueue 
+            commands={screen.suggestedCommands} 
+            onCommandClick={handleParseSubmit} 
+            disabled={isParsing} 
+          />
           
           <ParserInput onSubmit={handleParseSubmit} disabled={isParsing} />
-
-          {screen.suggestedCommands && screen.suggestedCommands.length > 0 && (
-            <div className="suggestions-container">
-              <span className="suggestions-label">Suggestions:</span>
-              {screen.suggestedCommands.map((cmd, i) => (
-                <button
-                  key={`${cmd}-${i}`}
-                  className="suggestion-chip"
-                  onClick={() => handleParseSubmit(cmd)}
-                  disabled={isParsing}
-                >
-                  {cmd}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       );
     }

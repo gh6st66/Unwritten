@@ -2,56 +2,86 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
+import { GoogleGenAI, Type } from "@google/genai";
 import { Origin, ResourceId } from "../game/types";
 import { OMENS_DATA } from "../data/claims";
 import { LEXEMES_DATA } from "../data/lexemes";
 import { LexemeTier } from "../types/lexeme";
 
 const validOmenIds = OMENS_DATA.map(c => c.id);
-const validResourceIds = Object.values(ResourceId);
 const validMarkIds = ["indebted", "oathbreaker", "visionary", "outcast"]; // A few examples for Gemini to use.
 const basicLexemeIds = LEXEMES_DATA.filter(l => l.tier === LexemeTier.Basic).map(l => l.id);
 
 export class OmenGenerator {
+  private ai: GoogleGenAI;
+
   constructor() {
-    // API Client is no longer initialized here
+    // This assumes API_KEY is set in the execution environment.
+    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
   }
 
   public async generateOrigins(count: number = 3): Promise<Origin[]> {
-    const promptContext = {
-      count,
-      validOmenIds,
-      validMarkIds,
-      basicLexemeIds,
+    const prompt = `
+      You are a creative writer for a dark fantasy narrative roguelike called "Unwritten".
+      Your task is to generate ${count} unique starting scenarios, called "Origins", for a player's run.
+      Each Origin must have a unique 'id', a 'title', a 'description', and optional gameplay modifiers.
+      
+      RULES:
+      - The 'title' should be evocative and mysterious (e.g., "A Debt Unpaid", "A Whispered Heresy").
+      - The 'description' should be a short, compelling paragraph (2-3 sentences) setting the theme for the run.
+      - 'id' should be a short, snake_case string derived from the title.
+      - 'tags' should be an array of 3-4 lowercase strings that describe the themes.
+      - 'initialPlayerMarkId' is an optional string. If used, it MUST be one of these values: ${JSON.stringify(validMarkIds)}.
+      - 'omenBias' is an optional array of strings. If used, its values MUST be chosen from this list: ${JSON.stringify(validOmenIds)}.
+      - 'lexemeBias' is an optional array of strings. If used, its values MUST be chosen from this list: ${JSON.stringify(basicLexemeIds)}.
+      - Do not invent new mark, omen, or lexeme IDs. Use only the ones provided.
+    `;
+
+    const responseSchema = {
+        type: Type.OBJECT,
+        properties: {
+            origins: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        id: { type: Type.STRING, description: "A unique snake_case identifier, e.g., 'a_debt_unpaid'." },
+                        title: { type: Type.STRING, description: "The evocative title of the origin." },
+                        description: { type: Type.STRING, description: "A 2-3 sentence thematic description for the run." },
+                        tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        initialPlayerMarkId: { type: Type.STRING, nullable: true },
+                        omenBias: { type: Type.ARRAY, items: { type: Type.STRING }, nullable: true },
+                        lexemeBias: { type: Type.ARRAY, items: { type: Type.STRING }, nullable: true },
+                    },
+                    required: ['id', 'title', 'description']
+                }
+            }
+        },
+        required: ['origins']
     };
     
     try {
-      const response = await fetch('/api/generate-origins', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(promptContext),
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema,
+        }
       });
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`Server responded with ${response.status}: ${errorBody}`);
-      }
-
-      const parsed = await response.json();
+      const jsonStr = response.text.trim();
+      const parsed = JSON.parse(jsonStr);
 
       if (parsed.origins && Array.isArray(parsed.origins)) {
-        // Basic validation and cleanup
         return parsed.origins.map((origin: any) => ({
           ...origin,
-          id: origin.id || `gen_${Math.random().toString(36).slice(2)}`,
-          title: origin.title || "An Unwritten Origin",
-          description: origin.description || "Fate has not yet been written.",
+          tags: origin.tags ?? [],
         })).slice(0, count);
       }
       throw new Error("Generated data is not in the expected format.");
     } catch (e) {
-      console.error("Failed to fetch or parse generated origins:", e);
-      // Return a set of default, hardcoded origins as a fallback.
+      console.error("Failed to generate origins with Gemini API:", e);
       return this.getFallbackOrigins();
     }
   }

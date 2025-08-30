@@ -63,7 +63,6 @@ export type Omen = {
   };
 };
 
-// FIX: Add missing Effect, ActionOutcome, and Encounter types.
 export type Effect = {
   resource: ResourceId;
   delta: number;
@@ -126,14 +125,14 @@ export type GameScreen =
   | { kind: "LOADING"; message: string; context: 'ENCOUNTER' | 'MASK' | 'WORLD_GEN' | 'SCENE' | 'ORIGIN_GEN' }
   | { kind: "SCENE"; sceneId: string; description: string; objects: SceneObject[]; narrativeLog: string[]; suggestedCommands: string[]; isHallucinating?: boolean; }
   | { kind: "RESOLVE"; summary: string }
-  | { kind: "COLLAPSE"; reason: string }
+  | { kind: "COLLAPSE"; reason: string; summaryLog: string[] }
   | { kind: "GENERATION_TESTER" };
 
 export type GameEvent =
   | { type: "REQUEST_NEW_RUN" }
   | { type: "ORIGINS_GENERATED"; origins: Origin[] }
   | { type: "START_RUN"; origin: Origin }
-  | { type: "WORLD_GENERATED"; world: World; civs: Civilization[] }
+  | { type: "WORLD_GENERATED"; world: World; civs: Civilization[]; worldFacts: string[] }
   | { type: "COMMIT_FIRST_MASK"; lexeme: Lexeme }
   | { type: "MASK_FORGED"; mask: Mask }
   | { type: "CONTINUE_AFTER_REVEAL" }
@@ -144,6 +143,7 @@ export type GameEvent =
   | { type: "END_RUN"; reason: string }
   | { type: "LOAD_STATE"; snapshot: GameState }
   | { type: "RESET_GAME" }
+  | { type: "RETURN_TO_TITLE" }
   | { type: "OPEN_TESTER" }
   | { type: "CLOSE_TESTER" };
 
@@ -158,6 +158,7 @@ export type GameState = {
   firstMaskLexeme: Lexeme | null;
   day: number;
   currentSceneId: string | null;
+  worldFacts: string[];
   // Accord System State
   npcs: Record<ID, NPCState>;
   factions: Record<ID, FactionState>;

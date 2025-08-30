@@ -4,7 +4,6 @@
 */
 
 .player-status-container {
-  margin-top: 1.5rem;
   padding: 1rem;
   border: 1px solid var(--border-color);
   background-color: rgba(0,0,0,0.2);
@@ -72,4 +71,29 @@
   font-size: 0.875rem;
   color: var(--secondary-text-color);
   font-style: italic;
+}
+
+.recognition-meter {
+  display: flex;
+  justify-content: space-around;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--secondary-text-color);
+}
+
+.mask-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mask-tag {
+  font-size: 0.75rem;
+  background-color: var(--surface-color);
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-color);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }

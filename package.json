@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:parser": "ts-node src/tools/parserTester.ts",
+    "lint:content": "ts-node scripts/lintContent.ts",
     "audit:no-combat": "rg -nE 'from \".*(combat|DeckManager|CardView|Hand|AdvantageSystem|StatusSystem|TurnHooks|VfxUtils|/cards|/DataLoader|/factions|/core/ids)\"' src && echo '❌ Forbidden imports found' && exit 1 || echo '✅ No forbidden imports'"
   },
   "dependencies": {

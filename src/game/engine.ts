@@ -142,19 +142,24 @@ export function useEngine() {
           // This is synchronous, no need to queue.
           const sceneId = state.currentSceneId || 'mountain_forge';
           dispatch({ type: "LOAD_SCENE", sceneId });
-        }
-    } else if (state.phase === "WORLD_GEN") {
-        if (!state.activeOrigin) {
+        } else if (context === 'WORLD_GEN') {
+           if (!state.activeOrigin) {
             dispatch({ type: "GENERATION_FAILED", error: "Internal error: Missing origin for world generation." });
-        } else {
-          try {
-              const world = generateWorld({ worldSeed: state.runId, historyYears: 50, variance: 0.1 });
-              const civs = generateCivs(world, 3);
-              dispatch({ type: "WORLD_GENERATED", world, civs });
-          } catch (e) {
-              console.error("World generation failed:", e);
-              const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
-              dispatch({ type: "GENERATION_FAILED", error: `Could not generate world. ${errorMessage}` });
+          } else {
+            try {
+                const { world, worldFacts } = generateWorld({ 
+                    worldSeed: state.runId, 
+                    historyYears: 50, 
+                    variance: 0.1,
+                    numFactions: 4,
+                });
+                const civs = generateCivs(world, 3);
+                dispatch({ type: "WORLD_GENERATED", world, civs, worldFacts });
+            } catch (e) {
+                console.error("World generation failed:", e);
+                const errorMessage = e instanceof Error ? e.message : "An unknown error occurred.";
+                dispatch({ type: "GENERATION_FAILED", error: `Could not generate world. ${errorMessage}` });
+            }
           }
         }
     }

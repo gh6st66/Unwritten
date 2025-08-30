@@ -2,21 +2,15 @@
 
 ## Current Status (As of This Update)
 
-Development has successfully established a robust and extensible foundation for the game. The core technical architecture for a deeply systemic, narrative-driven experience is now in place.
+Development has successfully completed the implementation of all core systems and the first major content pack (Phase 4). This establishes a feature-complete vertical slice of the game, including a robust procedural world, a reactive narrative engine, a natural language parser, and a persistence system.
 
--   A clean, data-driven state engine manages all game logic via declarative `EngineDelta` updates.
--   The "Shattered Accord" system provides a powerful framework for micro-reactivity, tracking NPC recognition and world stability.
--   The Conflict Beat scheduler allows for emergent, state-driven narrative events.
--   A flexible natural language parser with a rich lexicon serves as the primary player interface.
--   NPCs have a memory of interactions and can respond dynamically to player choices.
-
-The team's current focus is shifting to **Phase 4: Narrative Deepening & Content**, where we will build upon this strong foundation to create a deeply reactive and compelling narrative experience.
+The team's current focus is now on **Phase 5: Polish & Onboarding**, where we will refine the user experience, expand the parser's lexicon, and introduce new players to the game's unique mechanics.
 
 ---
 
 ## Phase 1: Core Systems & Parser Implementation (Complete)
 
-*Goal: Build the foundational technology for a narrative-first, parser-driven roguerike.*
+*Goal: Build the foundational technology for a narrative-first, parser-driven roguelike.*
 
 -   [x] **State Management:** Implemented a core engine to manage game flow (`TITLE`, `SCENE`, `COLLAPSE`).
 -   [x] **Text Parser:** Built a data-driven text parser that resolves natural language commands into game intents.
@@ -49,18 +43,18 @@ The team's current focus is shifting to **Phase 4: Narrative Deepening & Content
 
 ---
 
-## Phase 4: Narrative Deepening & Content (Current Focus)
+## Phase 4: Narrative Deepening & Content (Complete)
 
 *Goal: Leverage the completed systems to build a richer, more compelling player experience.*
 
--   [ ] **Journal & Omen System:** Expand the Omen system to track the player's `embrace` or `resist` path throughout a run, influencing which Conflict Beats are scheduled and how NPCs react.
--   [ ] **Mask Mechanics:** Evolve masks from narrative items into mechanically significant artifacts. Wearing a specific mask could unlock new commands, alter dialogue options, or be required to resolve certain Beats.
--   [ ] **Echo System (v2):** Implement the bootstrap phase where Echoes from the Chronicle create tangible changes in the next run (e.g., altered scenes, modified NPC dispositions, new factions).
--   [ ] **Content Pack 2:** Author a new suite of Conflict Beats, add more NPCs with detailed dialogue trees, and expand the variant text library to increase reactivity.
+-   [x] **Journal & Omen System:** The Omen system now tracks the player's `embrace` or `resist` path, influencing Conflict Beat scheduling.
+-   [x] **Mask Mechanics:** Masks are now mechanically significant artifacts that influence gameplay.
+-   [x] **Echo System (v2):** The bootstrap phase where Echoes from the Chronicle create tangible changes in the next run is implemented.
+-   [x] **Content Pack A:** Authored a suite of 180+ new, hand-crafted entries, including Sites, Relics, Rites, Hazards, and Beats.
 
 ---
 
-## Phase 5: Polish & Onboarding
+## Phase 5: Polish & Onboarding (Current Focus)
 
 *Goal: Refine the user experience, improve player guidance, and prepare for a polished vertical slice.*
 

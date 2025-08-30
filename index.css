@@ -509,3 +509,33 @@ button:disabled {
   font-size: 0.875rem;
   margin-left: 0.25rem;
 }
+
+/* --- UI Slice Additions --- */
+.new-run-banner {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--secondary-text-color);
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.status-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .status-panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
